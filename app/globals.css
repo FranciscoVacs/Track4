@@ -1,0 +1,121 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+:root {
+  --lv-navy: #242E8F;
+  --lv-yellow: #F6D300;
+  --lv-orange: #F58220;
+  --lv-red: #E52421;
+  --lv-cyan: #11A5D6;
+  --lv-light-bg: #F7F7F4;
+  --lv-pattern: #EDEDED;
+  --lv-text: #2B2B2B;
+  --lv-white: #FFFFFF;
+
+  --background: var(--lv-light-bg);
+  --foreground: var(--lv-text);
+  --card: #ffffff;
+  --card-foreground: var(--lv-text);
+  --popover: #ffffff;
+  --popover-foreground: var(--lv-text);
+  --primary: var(--lv-navy);
+  --primary-foreground: #ffffff;
+  --secondary: #F2F2EE;
+  --secondary-foreground: var(--lv-navy);
+  --muted: #F2F2EE;
+  --muted-foreground: #6B6B6B;
+  --accent: #F2F2EE;
+  --accent-foreground: var(--lv-navy);
+  --destructive: var(--lv-red);
+  --destructive-foreground: #ffffff;
+  --border: rgba(36, 46, 143, 0.08);
+  --input: rgba(36, 46, 143, 0.12);
+  --ring: var(--lv-navy);
+  --radius: 0.75rem;
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-display: var(--font-manrope), system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-lv-navy: var(--lv-navy);
+  --color-lv-yellow: var(--lv-yellow);
+  --color-lv-orange: var(--lv-orange);
+  --color-lv-red: var(--lv-red);
+  --color-lv-cyan: var(--lv-cyan);
+  --color-lv-light-bg: var(--lv-light-bg);
+  --color-lv-pattern: var(--lv-pattern);
+  --color-lv-text: var(--lv-text);
+  --color-lv-white: var(--lv-white);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--lv-light-bg);
+    color: var(--lv-text);
+    font-family: var(--font-sans);
+  }
+  .font-display {
+    font-family: var(--font-display);
+  }
+}
+
+@layer utilities {
+  .lv-card {
+    background: #fff;
+    border-radius: 1rem;
+    box-shadow: 0 1px 2px rgba(36, 46, 143, 0.04), 0 0 0 1px rgba(36, 46, 143, 0.08) inset;
+  }
+  .lv-pattern-bg {
+    background-image: url('https://www.lavirginia.com.ar/wp-content/uploads/2021/11/pattern-la-virginia.jpg');
+    background-repeat: repeat;
+  }
+  .lv-pattern-section {
+    position: relative;
+  }
+  .lv-pattern-section::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('https://www.lavirginia.com.ar/wp-content/uploads/2021/11/pattern-la-virginia.jpg');
+    background-repeat: repeat;
+    opacity: 0.08;
+    pointer-events: none;
+    mix-blend-mode: multiply;
+  }
+  .uppercase-label {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    color: var(--lv-navy);
+  }
+}
