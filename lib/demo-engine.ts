@@ -304,8 +304,8 @@ export function useDemoEngine() {
               id: `upload-${feedItemId}`,
               image: sc.image,
               productName: sc.productName,
-              aiSuggestion: sc.verdict.text,
-              aiSuggestionColor: 'orange',
+              aiSuggestion: sc.aiSuggestion || sc.verdict.text,
+              aiSuggestionColor: sc.confidenceTone === 'red' ? 'red' : 'orange',
               topPredictions: sc.topPredictions,
             },
           })

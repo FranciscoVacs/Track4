@@ -184,9 +184,17 @@ export const OperatorQueue = forwardRef<
                 }}
               >
                 <div className="text-[10px] uppercase tracking-wider font-semibold text-[var(--muted-foreground)]">
-                  Clasificación sugerida
+                  Análisis de la IA
                 </div>
-                <div className="text-[12px] font-semibold text-[var(--lv-navy)] mt-0.5">
+                <div
+                  className="text-[11.5px] font-medium text-[var(--lv-navy)] mt-1 leading-snug overflow-hidden"
+                  style={{
+                    display: '-webkit-box',
+                    WebkitLineClamp: 5,
+                    WebkitBoxOrient: 'vertical',
+                  }}
+                  title={active.aiSuggestion}
+                >
                   {active.aiSuggestion}
                 </div>
               </div>

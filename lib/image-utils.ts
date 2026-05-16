@@ -90,32 +90,35 @@ export function buildSyntheticScenario(
   result: AIInspectionResult,
 ): Scenario {
   const isApproved = result.verdict === 'APPROVED'
-  const needsReview = result.requiresHumanReview
-  const defectCount = result.capsules.filter((c) => c.isDefective).length
+  // Sanity check: si el LLM no detectó cápsulas, forzar revisión humana
+  // en vez de tratarlo como defecto automático
+  const noCapsulesDetected = !isApproved && result.totalDetected === 0
+  const needsReview = result.requiresHumanReview || noCapsulesDetected
 
   let type: ScenarioType
   let confidenceTone: Scenario['confidenceTone']
-  let verdictText: string
   let verdictTone: Scenario['verdict']['tone']
 
   if (isApproved) {
     type = 'auto-ok'
     confidenceTone = 'cyan'
-    verdictText = 'APROBADO · CLASIFICADO AUTOMÁTICAMENTE'
     verdictTone = 'approved'
   } else {
     // Todo lo FLAGGED va a la cola del operador para decisión humana
     type = 'review'
     if (needsReview) {
       confidenceTone = 'orange'
-      verdictText = 'REQUIERE REVISIÓN HUMANA'
       verdictTone = 'review'
     } else {
       confidenceTone = 'red'
-      verdictText = `DEFECTO DETECTADO · ${defectCount} cápsula${defectCount !== 1 ? 's' : ''}`
       verdictTone = 'defect'
     }
   }
+
+  // Texto del veredicto: usar el summary específico del LLM en vez de algo genérico
+  const summary = (result.summary || '').trim()
+  const prefix = isApproved ? 'APROBADO' : needsReview ? 'REVISIÓN HUMANA' : 'DEFECTO'
+  const verdictText = summary ? `${prefix} · ${summary.toUpperCase()}` : prefix
 
   return {
     id: feedItemId,
@@ -129,5 +132,7 @@ export function buildSyntheticScenario(
     topPredictions: buildTopPredictions(result),
     bboxes: capsulesToBboxes(result.capsules),
     verdict: { text: verdictText, tone: verdictTone },
+    // El reasoning largo del LLM se muestra al operador en la cola
+    aiSuggestion: result.reasoning || summary || 'Sin detalles disponibles',
   }
 }

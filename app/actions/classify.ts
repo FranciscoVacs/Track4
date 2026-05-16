@@ -69,7 +69,7 @@ export async function classifyImage(formData: FormData): Promise<ClassifyResult>
 
   try {
     const { object } = await generateObject({
-      model: openai('gpt-4o-mini'),
+      model: openai('gpt-4o'),
       schema: AIInspectionResultSchema,
       system: SYSTEM_PROMPT,
       temperature: 0,
@@ -83,7 +83,7 @@ export async function classifyImage(formData: FormData): Promise<ClassifyResult>
       success: true,
       data: {
         ...object,
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         processingMs,
       },
     }
