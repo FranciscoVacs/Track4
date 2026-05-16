@@ -1,8 +1,8 @@
 'use client'
 
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { Check, ChevronDown, X, RefreshCw, MessageSquare, Send } from 'lucide-react'
-import { forwardRef, useCallback, useState, useRef } from 'react'
+import { Check, ChevronDown, X, RefreshCw, MessageSquare, Send, ZoomIn } from 'lucide-react'
+import { forwardRef, useCallback, useEffect, useState, useRef } from 'react'
 
 type QueueEntry = {
   id: string
@@ -31,7 +31,17 @@ export const OperatorQueue = forwardRef<
   const [showFeedback, setShowFeedback] = useState(false)
   const [feedbackText, setFeedbackText] = useState('')
   const [feedbackSent, setFeedbackSent] = useState(false)
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    if (!lightboxImage) return
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightboxImage(null)
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [lightboxImage])
 
   const handleConfirm = useCallback(() => {
     setShowFeedback(true)
@@ -138,18 +148,33 @@ export const OperatorQueue = forwardRef<
                 height: '100%',
               }}
             >
-              <img
-                src={active.image || '/placeholder.svg'}
-                alt={active.productName}
-                onError={(e) => {
-                  const img = e.currentTarget as HTMLImageElement
-                  if (!img.src.includes('picsum.photos')) {
-                    img.src = `https://picsum.photos/seed/${active.id}/400/300`
-                  }
-                }}
-                className="h-24 w-full rounded-md object-cover mb-2.5"
-                crossOrigin="anonymous"
-              />
+              <button
+                type="button"
+                onClick={() => setLightboxImage(active.image)}
+                className="group relative h-40 w-full rounded-md mb-2.5 overflow-hidden flex items-center justify-center"
+                style={{ background: 'rgba(15,23,42,0.06)' }}
+                aria-label="Ver imagen completa"
+              >
+                <img
+                  src={active.image || '/placeholder.svg'}
+                  alt={active.productName}
+                  onError={(e) => {
+                    const img = e.currentTarget as HTMLImageElement
+                    if (!img.src.includes('picsum.photos')) {
+                      img.src = `https://picsum.photos/seed/${active.id}/400/300`
+                    }
+                  }}
+                  className="max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-[1.02]"
+                  crossOrigin="anonymous"
+                />
+                <span
+                  className="absolute top-2 right-2 inline-flex items-center gap-1 px-2 py-1 rounded-full text-[9.5px] font-semibold text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ background: 'rgba(15,23,42,0.75)' }}
+                >
+                  <ZoomIn className="h-2.5 w-2.5" aria-hidden="true" />
+                  Ampliar
+                </span>
+              </button>
 
               <div
                 className="rounded-md px-3 py-2 mb-2.5"
@@ -301,6 +326,44 @@ export const OperatorQueue = forwardRef<
           </div>
         )}
       </div>
+
+      {/* Lightbox */}
+      <AnimatePresence>
+        {lightboxImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-6"
+            style={{ background: 'rgba(8,11,28,0.85)' }}
+            onClick={() => setLightboxImage(null)}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Imagen ampliada"
+          >
+            <button
+              type="button"
+              onClick={() => setLightboxImage(null)}
+              className="absolute top-4 right-4 inline-flex items-center justify-center h-9 w-9 rounded-full text-white hover:bg-white/10"
+              aria-label="Cerrar"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <motion.img
+              initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+              src={lightboxImage}
+              alt="Imagen ampliada del producto"
+              onClick={(e) => e.stopPropagation()}
+              className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
+              crossOrigin="anonymous"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 })

@@ -2,8 +2,8 @@
 
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { useRef, useState } from 'react'
-import { Upload } from 'lucide-react'
-import type { FeedItem } from '@/lib/types'
+import { Upload, Sparkles } from 'lucide-react'
+import type { FeedItem, UserItemResult } from '@/lib/types'
 import { validateImage } from '@/lib/image-utils'
 
 const statusMeta: Record<FeedItem['status'], { label: string; bg: string; color: string }> = {
@@ -31,9 +31,10 @@ function FeedImage({ src, seedId, alt }: { src: string; seedId: string; alt: str
 type IncomingFeedProps = {
   items: FeedItem[]
   onUpload: (file: File, feedItemId: string, objectUrl: string) => void
+  userItemResults?: Record<string, UserItemResult>
 }
 
-export function IncomingFeed({ items, onUpload }: IncomingFeedProps) {
+export function IncomingFeed({ items, onUpload, userItemResults }: IncomingFeedProps) {
   const reduce = useReducedMotion()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -83,6 +84,9 @@ export function IncomingFeed({ items, onUpload }: IncomingFeedProps) {
       <div className="flex-1 flex flex-col overflow-hidden">
         <AnimatePresence initial={false}>
           {items.map((item, idx) => {
+            const llmStatus = userItemResults?.[item.scenarioId]?.status
+            const isLlmPending = llmStatus === 'pending' && item.status === 'queued'
+            const isLlmError = llmStatus === 'error'
             const meta = statusMeta[item.status]
             const fadeOpacity = Math.max(0.55, 1 - idx * 0.12)
             const isActive = idx === 0
@@ -127,12 +131,31 @@ export function IncomingFeed({ items, onUpload }: IncomingFeedProps) {
                     {item.timestamp}
                   </div>
                 </div>
-                <span
-                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-semibold tracking-wide whitespace-nowrap"
-                  style={{ background: meta.bg, color: meta.color }}
-                >
-                  {meta.label}
-                </span>
+                {isLlmPending ? (
+                  <motion.span
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-semibold tracking-wide whitespace-nowrap"
+                    style={{ background: 'rgba(36,46,143,0.10)', color: 'var(--lv-navy)' }}
+                    animate={reduce ? {} : { opacity: [0.7, 1, 0.7] }}
+                    transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                  >
+                    <Sparkles className="h-2.5 w-2.5" aria-hidden="true" />
+                    Analizando IA
+                  </motion.span>
+                ) : isLlmError ? (
+                  <span
+                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-semibold tracking-wide whitespace-nowrap"
+                    style={{ background: 'rgba(229,36,33,0.10)', color: 'var(--lv-red)' }}
+                  >
+                    Error IA
+                  </span>
+                ) : (
+                  <span
+                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-semibold tracking-wide whitespace-nowrap"
+                    style={{ background: meta.bg, color: meta.color }}
+                  >
+                    {meta.label}
+                  </span>
+                )}
               </motion.div>
             )
           })}

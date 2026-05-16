@@ -80,6 +80,7 @@ type Action =
   | { type: 'USER_ITEM_RESULT_READY'; feedItemId: string; scenario: Scenario }
   | { type: 'USER_ITEM_RESULT_ERROR'; feedItemId: string; error: string }
   | { type: 'START_USER_SCENARIO'; feedItemId: string; scenario: Scenario }
+  | { type: 'REMOVE_FEED_ITEM'; feedItemId: string }
 
 function reducer(state: DemoState, action: Action): DemoState {
   switch (action.type) {
@@ -187,6 +188,11 @@ function reducer(state: DemoState, action: Action): DemoState {
         kpis: { ...state.kpis, inspected: state.kpis.inspected + 1 },
         learnedBadge: false,
       }
+    case 'REMOVE_FEED_ITEM':
+      return {
+        ...state,
+        feed: state.feed.filter((f) => f.scenarioId !== action.feedItemId),
+      }
     default:
       return state
   }
@@ -284,6 +290,9 @@ export function useDemoEngine() {
           dispatch({ type: 'PHASE', phase: 'flying-to-queue' })
           dispatch({ type: 'FLYING', from: 'ai', to: 'queue', scenarioId: feedItemId })
           dispatch({ type: 'INCREMENT_REVIEW' })
+          if (sc.verdict.tone === 'defect') {
+            dispatch({ type: 'INCREMENT_DEFECT' })
+          }
         })
         t += 1300
         schedule(t, () => {
@@ -302,7 +311,8 @@ export function useDemoEngine() {
           })
         })
         t += 500
-        // Advance to next upload immediately — operator decides in their own time
+        // Item ya está representado en la cola del operador — sacarlo del feed
+        schedule(t, () => dispatch({ type: 'REMOVE_FEED_ITEM', feedItemId }))
         schedule(t, () => advanceQueue())
       } else {
         if (sc.type === 'auto-defect') {
@@ -312,6 +322,8 @@ export function useDemoEngine() {
         }
         schedule(t, () => dispatch({ type: 'PHASE', phase: 'leaving' }))
         t += 1300
+        // Análisis terminado — sacar el item del feed
+        schedule(t, () => dispatch({ type: 'REMOVE_FEED_ITEM', feedItemId }))
         schedule(t, () => advanceQueue())
       }
     },
@@ -413,12 +425,9 @@ export function useDemoEngine() {
 
   // Auto-enable on mount so uploads process immediately without pressing play
   useEffect(() => {
-    const t = setTimeout(() => {
-      playingRef.current = true
-      dispatch({ type: 'PLAY' })
-    }, 500)
+    playingRef.current = true
+    dispatch({ type: 'PLAY' })
     return () => {
-      clearTimeout(t)
       playingRef.current = false
       clearTimers()
     }

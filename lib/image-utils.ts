@@ -103,16 +103,18 @@ export function buildSyntheticScenario(
     confidenceTone = 'cyan'
     verdictText = 'APROBADO · CLASIFICADO AUTOMÁTICAMENTE'
     verdictTone = 'approved'
-  } else if (needsReview) {
-    type = 'review'
-    confidenceTone = 'orange'
-    verdictText = 'REQUIERE REVISIÓN HUMANA'
-    verdictTone = 'review'
   } else {
-    type = 'auto-defect'
-    confidenceTone = 'red'
-    verdictText = `DEFECTO DETECTADO · ${defectCount} cápsula${defectCount !== 1 ? 's' : ''}`
-    verdictTone = 'defect'
+    // Todo lo FLAGGED va a la cola del operador para decisión humana
+    type = 'review'
+    if (needsReview) {
+      confidenceTone = 'orange'
+      verdictText = 'REQUIERE REVISIÓN HUMANA'
+      verdictTone = 'review'
+    } else {
+      confidenceTone = 'red'
+      verdictText = `DEFECTO DETECTADO · ${defectCount} cápsula${defectCount !== 1 ? 's' : ''}`
+      verdictTone = 'defect'
+    }
   }
 
   return {

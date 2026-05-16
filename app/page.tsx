@@ -92,7 +92,11 @@ export default function Page() {
       <section className="px-8 py-6">
         <div className="grid grid-cols-12 gap-6">
           <div ref={incomingRef} className="col-span-12 lg:col-span-3">
-            <IncomingFeed items={state.feed} onUpload={handleUpload} />
+            <IncomingFeed
+              items={state.feed}
+              onUpload={handleUpload}
+              userItemResults={state.userItemResults}
+            />
           </div>
           <div ref={classifyingRef} className="col-span-12 lg:col-span-5">
             <AiClassifying
