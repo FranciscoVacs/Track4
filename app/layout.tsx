@@ -26,8 +26,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className={`${manrope.variable} ${inter.variable} bg-lv-light-bg`}>
-      <body className="font-sans antialiased text-lv-text">
+    <html lang="es" className={`${manrope.variable} ${inter.variable} bg-lv-navy`}>
+      <body className="font-sans antialiased text-lv-text" style={{ background: 'var(--lv-navy)' }}>
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

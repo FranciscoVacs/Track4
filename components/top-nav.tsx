@@ -1,65 +1,96 @@
 'use client'
 
 import { motion, useReducedMotion } from 'framer-motion'
+import { Pause, Play, RotateCcw } from 'lucide-react'
 
-export function TopNav() {
+export function TopNav({
+  playState,
+  onPlay,
+  onPause,
+  onReplay,
+}: {
+  playState: 'idle' | 'playing' | 'paused' | 'completed'
+  onPlay: () => void
+  onPause: () => void
+  onReplay: () => void
+}) {
   const reduce = useReducedMotion()
+
+  const handleDemoClick = () => {
+    if (playState === 'playing') onPause()
+    else if (playState === 'completed') onReplay()
+    else onPlay()
+  }
+
+  const demoLabel =
+    playState === 'playing' ? 'Pausar demo' : playState === 'completed' ? 'Repetir' : 'Reproducir demo'
+  const DemoIcon = playState === 'playing' ? Pause : playState === 'completed' ? RotateCcw : Play
+
   return (
-    <header className="sticky top-0 z-40 h-16 w-full bg-white border-b border-[var(--lv-pattern)]">
-      <div className="h-full px-8 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <svg
-            width="32"
-            height="32"
-            viewBox="0 0 32 32"
-            aria-hidden="true"
-            className="shrink-0"
+    <motion.header
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, ease: 'easeOut' }}
+      className="sticky top-0 z-40 h-10 w-full"
+      style={{
+        background: 'var(--lv-navy)',
+        // Thin yellow gradient accent line at the bottom
+        backgroundImage:
+          'linear-gradient(var(--lv-navy), var(--lv-navy)), linear-gradient(90deg, var(--lv-yellow) 0%, var(--lv-orange) 100%)',
+        backgroundOrigin: 'padding-box, border-box',
+        backgroundClip: 'padding-box, border-box',
+        borderBottom: '1px solid transparent',
+      }}
+    >
+      <div
+        className="h-full px-5 flex items-center justify-between relative"
+        style={{
+          boxShadow: 'inset 0 -1px 0 0 rgba(246, 211, 0, 0.4)',
+        }}
+      >
+        {/* Left: ultra-compact wordmark */}
+        <div className="flex items-center gap-2">
+          <span className="font-display text-[15px] font-extrabold italic tracking-tight leading-none text-white">
+            LV
+          </span>
+          <span className="h-3 w-px bg-white/20" aria-hidden="true" />
+          <span
+            className="text-[9.5px] uppercase font-semibold leading-none text-white/80"
+            style={{ letterSpacing: '0.22em' }}
           >
-            <rect width="32" height="32" rx="6" fill="var(--lv-navy)" />
-            <path
-              d="M8 7 L8 25 L15 25 L15 21 L12 21 L12 7 Z"
-              fill="var(--lv-yellow)"
-            />
-            <path
-              d="M17 7 L19 19 L21 7 L24 7 L21 25 L17 25 L14 7 Z"
-              fill="#fff"
-              transform="translate(0,0)"
-            />
-          </svg>
-          <span className="font-display font-extrabold uppercase tracking-[0.12em] text-[var(--lv-navy)] text-sm">
             Quality Vision
           </span>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--lv-light-bg)] border border-[var(--lv-pattern)]">
-            <span className="relative flex h-2 w-2">
-              {!reduce && (
-                <motion.span
-                  className="absolute inline-flex h-full w-full rounded-full bg-emerald-400"
-                  animate={{ scale: [1, 1.8], opacity: [0.6, 0] }}
-                  transition={{ duration: 1.6, repeat: Infinity, ease: 'easeOut' }}
-                />
-              )}
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-            </span>
-            <span className="text-[11px] font-semibold tracking-wider uppercase text-[var(--lv-navy)]">
-              Line 03 · Live
-            </span>
-          </div>
-          <div className="hidden sm:flex items-center px-3 py-1.5 rounded-full bg-[var(--lv-light-bg)] border border-[var(--lv-pattern)]">
-            <span className="text-[11px] font-semibold tracking-wider uppercase text-[var(--lv-navy)]">
-              Model v2.4
-            </span>
-          </div>
+
+        {/* Right: Play demo + avatar */}
+        <div className="flex items-center gap-2">
+          <motion.button
+            type="button"
+            onClick={handleDemoClick}
+            whileHover={reduce ? undefined : { scale: 1.04 }}
+            whileTap={reduce ? undefined : { scale: 0.96 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+            className="inline-flex items-center gap-1.5 px-2.5 h-6 rounded-full font-semibold text-[10.5px] leading-none"
+            style={{
+              background: 'linear-gradient(90deg, var(--lv-yellow) 0%, var(--lv-orange) 100%)',
+              color: 'var(--lv-navy)',
+            }}
+          >
+            <DemoIcon className="h-2.5 w-2.5" aria-hidden="true" />
+            {demoLabel}
+          </motion.button>
           <div
-            className="h-9 w-9 rounded-full flex items-center justify-center text-white text-xs font-bold"
-            style={{ background: 'var(--lv-navy)' }}
+            className="h-6 w-6 rounded-full flex items-center justify-center text-[9.5px] font-bold"
+            style={{
+              background: 'rgba(255,255,255,0.1)',
+              color: '#fff',
+            }}
             aria-label="Operadora M. González"
           >
             MG
           </div>
         </div>
       </div>
-    </header>
+    </motion.header>
   )
 }

@@ -2,12 +2,18 @@
 
 import { motion, useReducedMotion } from 'framer-motion'
 
-export function StatusStrip() {
+export function StatusStrip({
+  inspected,
+  awaiting,
+}: {
+  inspected: number
+  awaiting: number
+}) {
   const reduce = useReducedMotion()
   return (
     <div
-      className="sticky bottom-0 z-30 h-10 px-8 flex items-center justify-between text-xs text-white"
-      style={{ background: 'var(--lv-navy)' }}
+      className="sticky bottom-0 z-30 h-10 px-8 flex items-center justify-between text-[11px] text-white"
+      style={{ background: 'var(--lv-navy)', borderTop: '1px solid rgba(246,211,0,0.3)' }}
       role="status"
       aria-live="polite"
     >
@@ -22,12 +28,22 @@ export function StatusStrip() {
           )}
           <span className="relative inline-block h-2 w-2 rounded-full bg-emerald-400" />
         </span>
-        <span className="font-semibold tracking-wide">
-          LIVE · Camera 03 connected · Model v2.4
+        <span className="font-semibold tracking-wide text-white/95">
+          EN VIVO
+          <span className="text-white/50"> · </span>
+          Cámara 03
+          <span className="text-white/50"> · </span>
+          <span className="text-white/75">cam-03.lv-factory.local</span>
+          <span className="text-white/50"> · </span>
+          Modelo v2.4
         </span>
       </div>
       <div className="hidden sm:block tabular-nums text-white/90">
-        247 inspections today · 12 pending review · Last update 14:32
+        <span className="font-semibold">{inspected}</span> inspecciones hoy
+        <span className="text-white/50"> · </span>
+        <span className="font-semibold">{awaiting}</span> pendientes de revisión
+        <span className="text-white/50"> · </span>
+        Última actualización <span className="font-semibold">14:32</span>
       </div>
     </div>
   )
