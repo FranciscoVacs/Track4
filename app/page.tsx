@@ -15,7 +15,7 @@ import { StatusStrip } from '@/components/status-strip'
 import { useDemoEngine } from '@/lib/demo-engine'
 
 export default function Page() {
-  const { state, currentScenario, play, pause, replay, dismissRetrain } = useDemoEngine()
+  const { state, currentScenario, play, pause, replay, dismissRetrain, manualDecide } = useDemoEngine()
 
   const incomingRef = useRef<HTMLDivElement>(null)
   const classifyingRef = useRef<HTMLDivElement>(null)
@@ -26,11 +26,7 @@ export default function Page() {
   const flyingFromRef = state.flyingCard?.from === 'incoming' ? incomingRef : classifyingRef
   const flyingToRef = state.flyingCard?.to === 'ai' ? classifyingRef : queueRef
 
-  // Operator decision handler (manual click); auto-decision is fired by engine
-  const handleDecide = () => {
-    // For demo simplicity, manual clicks during demo are absorbed by engine timer.
-    // No-op here; the engine will auto-decide.
-  }
+  const handleDecide = manualDecide
 
   return (
     <main className="min-h-screen flex flex-col" style={{ background: 'var(--lv-navy)' }}>
@@ -118,7 +114,7 @@ export default function Page() {
             transition={{ duration: 0.4 }}
             className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-3 py-1.5 rounded-full bg-[var(--lv-cyan)] text-white text-[10px] font-bold uppercase tracking-wider shadow-lg"
           >
-            +1 New label
+            +1 Nueva etiqueta
           </motion.div>
         )}
       </AnimatePresence>

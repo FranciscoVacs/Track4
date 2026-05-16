@@ -148,8 +148,19 @@ function reducer(state: DemoState, action: Action): DemoState {
         retrainToast: reached ? true : state.retrainToast,
       }
     }
-    case 'DECREMENT_QUEUE':
-      return { ...state, queue: state.queue.slice(1) }
+    case 'DECREMENT_QUEUE': {
+      if (state.queue.length === 0) return state
+      const remaining = state.queue.slice(1)
+      // Recycle: if queue would be empty, refill with initial items
+      if (remaining.length === 0) {
+        const recycled = initialQueue.map((item, i) => ({
+          ...item,
+          id: `${item.id}-r${Date.now()}-${i}`,
+        }))
+        return { ...state, queue: recycled }
+      }
+      return { ...state, queue: remaining }
+    }
     case 'INCREMENT_AUTO':
       return {
         ...state,
@@ -284,9 +295,17 @@ export function useDemoEngine() {
             },
           })
         })
-        // Auto-decide after 3.8s so audience sees the operator card sit there
+        // Auto-decide after 3.8s — but only if the demo item is still in queue
         t += 3800
         schedule(t, () => {
+          const q = stateRef.current.queue
+          const demoId = `demo-${sc.id}`
+          const stillInQueue = q.some((item) => item.id === demoId)
+          if (!stillInQueue) {
+            // User already manually decided this item, skip auto-decide
+            dispatch({ type: 'PHASE', phase: 'operator-decided' })
+            return
+          }
           dispatch({ type: 'PHASE', phase: 'operator-decided' })
           dispatch({ type: 'DECREMENT_QUEUE' })
           dispatch({ type: 'DECREMENT_REVIEW' })
@@ -373,6 +392,27 @@ export function useDemoEngine() {
     dispatch({ type: 'HIDE_RETRAIN' })
   }, [])
 
+  const manualDecide = useCallback(() => {
+    const s = stateRef.current
+    if (s.queue.length === 0) return
+    dispatch({ type: 'DECREMENT_QUEUE' })
+    dispatch({ type: 'DECREMENT_REVIEW' })
+    dispatch({ type: 'EMIT_PARTICLE' })
+    // Add to pool after a short delay to sync with particle animation
+    setTimeout(() => {
+      dispatch({
+        type: 'INCREMENT_POOL',
+        decision: {
+          id: `pd-manual-${Date.now()}`,
+          initial: 'M.G',
+          timestamp: nowStamp(),
+          decisionColor: 'navy',
+          label: 'Decisión manual',
+        },
+      })
+    }, 800)
+  }, [])
+
   // Auto-play on mount after 1s
   useEffect(() => {
     const t = setTimeout(() => {
@@ -407,5 +447,6 @@ export function useDemoEngine() {
     pause,
     replay,
     dismissRetrain,
+    manualDecide,
   }
 }

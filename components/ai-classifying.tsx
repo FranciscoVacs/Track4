@@ -23,11 +23,11 @@ function verdictEs(t: 'approved' | 'minor' | 'defect' | 'review' | 'learned') {
 }
 
 const verdictStyle = {
-  approved: { bg: '#ECFDF5', border: '#10B981', text: '#064E3B', icon: '✓' },
-  minor: { bg: 'rgba(246,211,0,0.15)', border: 'var(--lv-yellow)', text: 'var(--lv-navy)', icon: '⚠' },
-  defect: { bg: '#FEF2F2', border: 'var(--lv-red)', text: '#7F1D1D', icon: '!' },
-  review: { bg: 'rgba(245,130,32,0.15)', border: 'var(--lv-orange)', text: 'var(--lv-navy)', icon: '?' },
-  learned: { bg: '#FEF2F2', border: 'var(--lv-red)', text: '#7F1D1D', icon: '!' },
+  approved: { bg: '#10B981', text: '#fff', icon: '✓' },
+  minor: { bg: 'var(--lv-yellow)', text: 'var(--lv-navy)', icon: '⚠' },
+  defect: { bg: 'var(--lv-red)', text: '#fff', icon: '!' },
+  review: { bg: 'var(--lv-orange)', text: '#fff', icon: '?' },
+  learned: { bg: 'var(--lv-red)', text: '#fff', icon: '!' },
 }
 
 export function AiClassifying({
@@ -126,7 +126,7 @@ export function AiClassifying({
         <div className="flex items-center gap-2">
           <span
             className="inline-block h-1.5 w-1.5 rounded-full"
-            style={{ background: isAnalyzing ? 'var(--lv-cyan)' : confidenceColor }}
+            style={{ background: isAnalyzing ? 'var(--lv-cyan)' : confidenceColor, transition: 'background 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }}
             aria-hidden="true"
           />
           <span className="uppercase-label text-[12px]">Resultado de inferencia</span>
@@ -277,19 +277,22 @@ export function AiClassifying({
               key={confidence}
               initial={reduce ? false : { opacity: 0.5, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
               className="font-display text-[44px] leading-none font-extrabold tracking-tight tabular-nums"
-              style={{ color: confidenceColor }}
+              style={{ color: confidenceColor, transition: 'color 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }}
             >
               {confidence}
             </motion.span>
-            <span className="font-display text-xl font-extrabold ml-0.5" style={{ color: confidenceColor, opacity: 0.6 }}>
+            <span
+              className="font-display text-xl font-extrabold ml-0.5"
+              style={{ color: confidenceColor, opacity: 0.6, transition: 'color 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }}
+            >
               %
             </span>
           </div>
           <span
             className="font-display font-extrabold text-sm tracking-[0.12em] uppercase"
-            style={{ color: confidenceColor }}
+            style={{ color: confidenceColor, transition: 'color 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }}
           >
             {scenario && showVerdict ? verdictEs(scenario.verdict.tone) : '—'}
           </span>
@@ -297,7 +300,7 @@ export function AiClassifying({
         <div className="h-1.5 w-full rounded-full bg-[var(--lv-surface-3)] overflow-hidden">
           <motion.div
             className="h-full rounded-full"
-            style={{ background: confidenceColor }}
+            style={{ background: confidenceColor, transition: 'background 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }}
             initial={false}
             animate={{ width: `${confidence}%` }}
             transition={{ type: 'spring', stiffness: 140, damping: 22 }}
@@ -315,11 +318,11 @@ export function AiClassifying({
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ type: 'spring', stiffness: 200, damping: 22 }}
                 className="h-full w-full rounded-lg px-4 flex items-center gap-3"
-                style={{ background: v.bg, border: `1.5px solid ${v.border}` }}
+                style={{ background: v.bg }}
               >
                 <span
                   className="inline-flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold"
-                  style={{ background: v.border, color: '#fff' }}
+                  style={{ background: 'rgba(255,255,255,0.25)', color: v.text }}
                 >
                   {v.icon}
                 </span>

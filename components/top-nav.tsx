@@ -2,6 +2,7 @@
 
 import { motion, useReducedMotion } from 'framer-motion'
 import { Pause, Play, RotateCcw } from 'lucide-react'
+import { ProductionReviewDialog } from '@/components/production-review-dialog'
 
 export function TopNav({
   playState,
@@ -62,8 +63,9 @@ export function TopNav({
           </span>
         </div>
 
-        {/* Right: Play demo + avatar */}
+        {/* Right: production review + play demo + avatar */}
         <div className="flex items-center gap-2">
+          <ProductionReviewDialog />
           <motion.button
             type="button"
             onClick={handleDemoClick}

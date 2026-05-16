@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, useReducedMotion } from 'framer-motion'
-import { forwardRef, useMemo } from 'react'
+import { forwardRef, useMemo, useEffect, useRef, useState } from 'react'
 import { accuracyHistory } from '@/lib/demo-script'
 import type { PoolDecision } from '@/lib/types'
 
@@ -17,6 +17,15 @@ export const ModelLearningPool = forwardRef<
 >(function ModelLearningPool({ count, decisions, progressRef }, ref) {
   const reduce = useReducedMotion()
   const pct = Math.min(100, (count / 50) * 100)
+  const prevCount = useRef(count)
+  const [pulseKey, setPulseKey] = useState(0)
+
+  useEffect(() => {
+    if (count > prevCount.current && !reduce) {
+      setPulseKey((k) => k + 1)
+    }
+    prevCount.current = count
+  }, [count, reduce])
 
   const path = useMemo(() => {
     const w = 180
@@ -50,11 +59,23 @@ export const ModelLearningPool = forwardRef<
           </div>
           <div ref={progressRef as React.RefObject<HTMLDivElement>} className="relative h-1.5 rounded-full bg-[var(--lv-surface-3)] overflow-hidden">
             <motion.div
-              className="h-full rounded-full bg-[var(--lv-navy)]"
+              className="h-full rounded-full bg-[var(--lv-navy)] relative"
               initial={false}
               animate={{ width: `${pct}%` }}
               transition={{ type: 'spring', stiffness: 140, damping: 22 }}
-            />
+            >
+              {/* Pulse glow on increment */}
+              {pulseKey > 0 && (
+                <motion.span
+                  key={pulseKey}
+                  className="absolute inset-0 rounded-full pointer-events-none"
+                  style={{ background: 'var(--lv-yellow)' }}
+                  initial={{ opacity: 0.8 }}
+                  animate={{ opacity: 0 }}
+                  transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                />
+              )}
+            </motion.div>
           </div>
           <div className="mt-1.5 text-[11px] text-[var(--lv-text)]">
             <span className="font-bold tabular-nums">{count}</span>

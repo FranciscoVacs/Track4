@@ -1,8 +1,8 @@
 'use client'
 
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { Check, ChevronDown, SkipForward, X, RefreshCw } from 'lucide-react'
-import { forwardRef } from 'react'
+import { Check, ChevronDown, X, RefreshCw, MessageSquare, Send } from 'lucide-react'
+import { forwardRef, useCallback, useState, useRef } from 'react'
 
 type QueueEntry = {
   id: string
@@ -27,6 +27,41 @@ export const OperatorQueue = forwardRef<
   const reduce = useReducedMotion()
   const active = items[0]
   const next = items.slice(1, 3)
+  const [flashKey, setFlashKey] = useState(0)
+  const [showFeedback, setShowFeedback] = useState(false)
+  const [feedbackText, setFeedbackText] = useState('')
+  const [feedbackSent, setFeedbackSent] = useState(false)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
+
+  const handleConfirm = useCallback(() => {
+    setShowFeedback(true)
+    setTimeout(() => inputRef.current?.focus(), 100)
+  }, [])
+
+  const handleSendAndConfirm = useCallback(() => {
+    setFlashKey((k) => k + 1)
+    setShowFeedback(false)
+    setFeedbackText('')
+    if (feedbackText.trim()) {
+      setFeedbackSent(true)
+      setTimeout(() => setFeedbackSent(false), 2000)
+    }
+    onDecide()
+  }, [onDecide, feedbackText])
+
+  const handleSkipFeedback = useCallback(() => {
+    setFlashKey((k) => k + 1)
+    setShowFeedback(false)
+    setFeedbackText('')
+    onDecide()
+  }, [onDecide])
+
+  const handleDecideWithFeedback = useCallback(() => {
+    setFlashKey((k) => k + 1)
+    setShowFeedback(false)
+    setFeedbackText('')
+    onDecide()
+  }, [onDecide])
 
   return (
     <motion.div
@@ -46,6 +81,23 @@ export const OperatorQueue = forwardRef<
           {awaiting} pendientes
         </span>
       </div>
+
+      {/* Feedback sent confirmation */}
+      <AnimatePresence>
+        {feedbackSent && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="mb-2 px-3 py-2 rounded-lg text-[11px] font-semibold text-white flex items-center gap-2"
+            style={{ background: 'var(--lv-cyan)' }}
+          >
+            <Check className="h-3.5 w-3.5" />
+            Feedback enviado al equipo de IA
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="flex-1 relative">
         {/* Background stacked cards */}
@@ -132,54 +184,112 @@ export const OperatorQueue = forwardRef<
               </div>
 
               <div className="mt-auto flex flex-col gap-2">
-                {/* Primary action — dominant */}
-                <motion.button
-                  type="button"
-                  onClick={onDecide}
-                  whileHover={reduce ? undefined : { scale: 1.015 }}
-                  whileTap={reduce ? undefined : { scale: 0.97 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                  className="h-11 w-full rounded-lg bg-[var(--lv-navy)] text-white text-[13px] font-bold inline-flex items-center justify-center gap-2"
-                >
-                  <Check className="h-4 w-4" /> Confirmar defecto
-                </motion.button>
-                {/* Secondary actions — row */}
-                <div className="flex gap-2">
-                  <motion.button
-                    type="button"
-                    onClick={onDecide}
-                    whileHover={reduce ? undefined : { scale: 1.015 }}
-                    whileTap={reduce ? undefined : { scale: 0.97 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                    className="h-9 flex-1 rounded-lg text-[var(--lv-navy)] text-[11px] font-semibold inline-flex items-center justify-center gap-1.5"
-                    style={{ background: 'var(--lv-surface-3)' }}
-                  >
-                    <RefreshCw className="h-3.5 w-3.5" /> Otra categoría
-                    <ChevronDown className="h-3 w-3 opacity-50" />
-                  </motion.button>
-                  <motion.button
-                    type="button"
-                    onClick={onDecide}
-                    whileHover={reduce ? undefined : { scale: 1.015 }}
-                    whileTap={reduce ? undefined : { scale: 0.97 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                    className="h-9 flex-1 rounded-lg text-[var(--lv-navy)] text-[11px] font-semibold inline-flex items-center justify-center gap-1.5"
-                    style={{ background: 'var(--lv-surface-3)' }}
-                  >
-                    <X className="h-3.5 w-3.5" /> No es defecto
-                  </motion.button>
-                </div>
-                {/* Tertiary — deprioritized */}
-                <motion.button
-                  type="button"
-                  onClick={onDecide}
-                  whileHover={reduce ? undefined : { opacity: 0.7 }}
-                  whileTap={reduce ? undefined : { scale: 0.97 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                  className="h-7 w-full text-[var(--muted-foreground)] text-[10px] font-semibold inline-flex items-center justify-center gap-1"
-                >
-                  <SkipForward className="h-3 w-3" /> Omitir
-                </motion.button>
+                <AnimatePresence mode="wait">
+                  {showFeedback ? (
+                    <motion.div
+                      key="feedback"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                      className="flex flex-col gap-2 overflow-hidden"
+                    >
+                      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold text-[var(--lv-navy)]">
+                        <MessageSquare className="h-3 w-3" />
+                        Feedback para el equipo de IA
+                      </div>
+                      <textarea
+                        ref={inputRef}
+                        value={feedbackText}
+                        onChange={(e) => setFeedbackText(e.target.value)}
+                        placeholder="Ej: la etiqueta estaba doblada, revisar ángulo de cámara..."
+                        className="w-full h-16 rounded-lg px-3 py-2 text-[11px] text-[var(--lv-text)] resize-none outline-none border-2 border-transparent focus:border-[var(--lv-navy)]"
+                        style={{ background: 'var(--lv-surface-3)' }}
+                      />
+                      <div className="flex gap-2">
+                        <motion.button
+                          type="button"
+                          onClick={handleSendAndConfirm}
+                          whileHover={reduce ? undefined : { scale: 1.015 }}
+                          whileTap={reduce ? undefined : { scale: 0.97 }}
+                          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                          className="h-10 flex-1 rounded-lg bg-[var(--lv-navy)] text-white text-[12px] font-bold inline-flex items-center justify-center gap-2 relative overflow-hidden"
+                        >
+                          <AnimatePresence>
+                            {flashKey > 0 && (
+                              <motion.span
+                                key={flashKey}
+                                className="absolute inset-0 bg-white/25 rounded-lg pointer-events-none"
+                                initial={{ opacity: 1 }}
+                                animate={{ opacity: 0 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                              />
+                            )}
+                          </AnimatePresence>
+                          <Send className="h-3.5 w-3.5" />
+                          {feedbackText.trim() ? 'Confirmar y enviar' : 'Confirmar sin feedback'}
+                        </motion.button>
+                        <motion.button
+                          type="button"
+                          onClick={() => { setShowFeedback(false); setFeedbackText('') }}
+                          whileTap={reduce ? undefined : { scale: 0.97 }}
+                          className="h-10 px-3 rounded-lg text-[var(--muted-foreground)] text-[11px] font-semibold"
+                          style={{ background: 'var(--lv-surface-3)' }}
+                        >
+                          Cancelar
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="actions"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="flex flex-col gap-2"
+                    >
+                      {/* Primary action */}
+                      <motion.button
+                        type="button"
+                        onClick={handleConfirm}
+                        whileHover={reduce ? undefined : { scale: 1.015 }}
+                        whileTap={reduce ? undefined : { scale: 0.97 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                        className="h-11 w-full rounded-lg bg-[var(--lv-navy)] text-white text-[13px] font-bold inline-flex items-center justify-center gap-2 relative overflow-hidden"
+                      >
+                        <Check className="h-4 w-4" /> Confirmar defecto
+                      </motion.button>
+                      {/* Secondary actions */}
+                      <div className="flex gap-2">
+                        <motion.button
+                          type="button"
+                          onClick={handleDecideWithFeedback}
+                          whileHover={reduce ? undefined : { scale: 1.015 }}
+                          whileTap={reduce ? undefined : { scale: 0.97 }}
+                          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                          className="h-9 flex-1 rounded-lg text-[var(--lv-navy)] text-[11px] font-semibold inline-flex items-center justify-center gap-1.5"
+                          style={{ background: 'var(--lv-surface-3)' }}
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" /> Otra categoría
+                          <ChevronDown className="h-3 w-3 opacity-50" />
+                        </motion.button>
+                        <motion.button
+                          type="button"
+                          onClick={handleSkipFeedback}
+                          whileHover={reduce ? undefined : { scale: 1.015 }}
+                          whileTap={reduce ? undefined : { scale: 0.97 }}
+                          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                          className="h-9 flex-1 rounded-lg text-[var(--lv-navy)] text-[11px] font-semibold inline-flex items-center justify-center gap-1.5"
+                          style={{ background: 'var(--lv-surface-3)' }}
+                        >
+                          <X className="h-3.5 w-3.5" /> No es defecto
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </motion.div>
           )}

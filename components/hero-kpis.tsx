@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, useMotionValue, useTransform, animate, useReducedMotion } from 'framer-motion'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 function AnimatedNumber({
   value,
@@ -25,7 +25,7 @@ function AnimatedNumber({
       return
     }
     const unsub = rounded.on('change', (v) => setDisplay(v))
-    const controls = animate(mv, value, { duration, ease: 'easeOut' })
+    const controls = animate(mv, value, { duration, ease: [0.16, 1, 0.3, 1] })
     return () => {
       controls.stop()
       unsub()
@@ -48,6 +48,15 @@ export function HeroKpis({
 }) {
   const reduce = useReducedMotion()
   const pct = Math.min(100, Math.round((modelProgress / 50) * 100))
+  const prevProgress = useRef(modelProgress)
+  const [progressPulse, setProgressPulse] = useState(0)
+
+  useEffect(() => {
+    if (modelProgress > prevProgress.current && !reduce) {
+      setProgressPulse((k) => k + 1)
+    }
+    prevProgress.current = modelProgress
+  }, [modelProgress, reduce])
 
   return (
     <motion.section
@@ -129,14 +138,25 @@ export function HeroKpis({
           <span className="text-sm text-white/50 tabular-nums font-semibold">/50</span>
           <div className="w-20 h-1.5 rounded-full bg-white/15 overflow-hidden">
             <motion.div
-              className="h-full rounded-full"
+              className="h-full rounded-full relative"
               style={{
                 background: 'linear-gradient(90deg, var(--lv-yellow) 0%, var(--lv-orange) 100%)',
               }}
               initial={false}
               animate={{ width: `${pct}%` }}
               transition={{ type: 'spring', stiffness: 120, damping: 22 }}
-            />
+            >
+              {progressPulse > 0 && (
+                <motion.span
+                  key={progressPulse}
+                  className="absolute inset-0 rounded-full pointer-events-none"
+                  style={{ background: 'var(--lv-yellow)' }}
+                  initial={{ opacity: 0.9 }}
+                  animate={{ opacity: 0 }}
+                  transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                />
+              )}
+            </motion.div>
           </div>
           <span className="text-[11px] uppercase tracking-[0.08em] font-semibold text-white/70 leading-tight hidden md:block">
             Reentrenar
