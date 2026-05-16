@@ -51,8 +51,9 @@ export type FeedItem = {
   shortName: string
   image: string
   timestamp: string
-  status: 'queued' | 'analyzing' | 'done' | 'defect' | 'review'
+  status: 'queued' | 'analyzing' | 'done' | 'defect' | 'review' | 'error'
   source: FeedItemSource
+  errorMessage?: string
 }
 
 export type UserItemResult = {

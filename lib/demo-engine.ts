@@ -173,6 +173,11 @@ function reducer(state: DemoState, action: Action): DemoState {
     case 'USER_ITEM_RESULT_ERROR':
       return {
         ...state,
+        feed: state.feed.map((f) =>
+          f.scenarioId === action.feedItemId
+            ? { ...f, status: 'error', errorMessage: action.error }
+            : f,
+        ),
         userItemResults: {
           ...state.userItemResults,
           [action.feedItemId]: { feedItemId: action.feedItemId, status: 'error', scenario: null, error: action.error },

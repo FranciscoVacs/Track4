@@ -7,6 +7,8 @@ import { SYSTEM_PROMPT, buildUserPrompt } from '@/lib/prompts'
 import { validateImage, getMimeType, fileToBase64 } from '@/lib/image-utils'
 
 let _referenceBase64: string | null = null
+const CLASSIFY_TIMEOUT_MS = 20_000
+
 async function getReferenceBase64(): Promise<string | null> {
   if (_referenceBase64) return _referenceBase64
   try {
@@ -31,6 +33,22 @@ async function getReferenceBase64(): Promise<string | null> {
 type ClassifySuccess = { success: true; data: AIInspectionResult & { model: string; processingMs: number } }
 type ClassifyError = { success: false; error: string }
 type ClassifyResult = ClassifySuccess | ClassifyError
+
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`timeout:${ms}`))
+    }, ms)
+  })
+
+  try {
+    return await Promise.race([promise, timeoutPromise])
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId)
+  }
+}
 
 export async function classifyImage(formData: FormData): Promise<ClassifyResult> {
   const file = formData.get('image')
@@ -68,14 +86,17 @@ export async function classifyImage(formData: FormData): Promise<ClassifyResult>
   imageContent.push({ type: 'text', text: buildUserPrompt(typeof boxId === 'string' ? boxId : undefined) })
 
   try {
-    const { object } = await generateObject({
-      model: openai('gpt-4o-mini'),
-      schema: AIInspectionResultSchema,
-      system: SYSTEM_PROMPT,
-      temperature: 0,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      messages: [{ role: 'user', content: imageContent as any }],
-    })
+    const { object } = await withTimeout(
+      generateObject({
+        model: openai('gpt-4o-mini'),
+        schema: AIInspectionResultSchema,
+        system: SYSTEM_PROMPT,
+        temperature: 0,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        messages: [{ role: 'user', content: imageContent as any }],
+      }),
+      CLASSIFY_TIMEOUT_MS,
+    )
 
     const processingMs = Date.now() - inicio
 
@@ -90,13 +111,16 @@ export async function classifyImage(formData: FormData): Promise<ClassifyResult>
   } catch (err) {
     const mensaje = err instanceof Error ? err.message : 'Error desconocido'
     if (mensaje.includes('API_KEY') || mensaje.includes('401') || mensaje.includes('403')) {
-      return { success: false, error: 'Error de autenticación con la API de Gemini. Verificá la variable GOOGLE_GENERATIVE_AI_API_KEY en .env.local.' }
+      return { success: false, error: 'Error de autenticación con la API de OpenAI. Verificá la variable OPENAI_API_KEY en .env.local.' }
     }
     if (mensaje.includes('quota') || mensaje.includes('RESOURCE_EXHAUSTED') || mensaje.includes('free_tier')) {
-      return { success: false, error: 'Cuota de Gemini agotada. Activá billing en console.cloud.google.com o esperá a que se resetee el límite.' }
+      return { success: false, error: 'Cuota de OpenAI agotada o límite alcanzado. Revisá billing y límites de tu cuenta.' }
     }
-    if (mensaje.includes('fetch') || mensaje.includes('network') || mensaje.includes('timeout')) {
-      return { success: false, error: 'No se pudo conectar con la API de Gemini. Verificá la conexión a internet.' }
+    if (mensaje.includes('fetch') || mensaje.includes('network')) {
+      return { success: false, error: 'No se pudo conectar con la API de OpenAI. Verificá la conexión a internet.' }
+    }
+    if (mensaje.includes('timeout:')) {
+      return { success: false, error: 'La clasificación tardó demasiado y fue cancelada. Probá con una imagen más liviana o revisá la API.' }
     }
     return { success: false, error: `Error al procesar la imagen: ${mensaje}` }
   }
@@ -138,14 +162,17 @@ export async function classifyImageHighAccuracy(formData: FormData): Promise<Cla
   imageContentHigh.push({ type: 'text', text: buildUserPrompt(typeof boxId === 'string' ? boxId : undefined) })
 
   try {
-    const { object } = await generateObject({
-      model: openai('gpt-4o'),
-      schema: AIInspectionResultSchema,
-      system: SYSTEM_PROMPT,
-      temperature: 0,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      messages: [{ role: 'user', content: imageContentHigh as any }],
-    })
+    const { object } = await withTimeout(
+      generateObject({
+        model: openai('gpt-4o'),
+        schema: AIInspectionResultSchema,
+        system: SYSTEM_PROMPT,
+        temperature: 0,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        messages: [{ role: 'user', content: imageContentHigh as any }],
+      }),
+      CLASSIFY_TIMEOUT_MS,
+    )
 
     const processingMs = Date.now() - inicio
 
@@ -160,13 +187,16 @@ export async function classifyImageHighAccuracy(formData: FormData): Promise<Cla
   } catch (err) {
     const mensaje = err instanceof Error ? err.message : 'Error desconocido'
     if (mensaje.includes('API_KEY') || mensaje.includes('401') || mensaje.includes('403')) {
-      return { success: false, error: 'Error de autenticación con la API de Gemini. Verificá la variable GOOGLE_GENERATIVE_AI_API_KEY en .env.local.' }
+      return { success: false, error: 'Error de autenticación con la API de OpenAI. Verificá la variable OPENAI_API_KEY en .env.local.' }
     }
     if (mensaje.includes('quota') || mensaje.includes('RESOURCE_EXHAUSTED') || mensaje.includes('free_tier')) {
-      return { success: false, error: 'Cuota de Gemini agotada. Activá billing en console.cloud.google.com o esperá a que se resetee el límite.' }
+      return { success: false, error: 'Cuota de OpenAI agotada o límite alcanzado. Revisá billing y límites de tu cuenta.' }
     }
-    if (mensaje.includes('fetch') || mensaje.includes('network') || mensaje.includes('timeout')) {
-      return { success: false, error: 'No se pudo conectar con la API de Gemini. Verificá la conexión a internet.' }
+    if (mensaje.includes('fetch') || mensaje.includes('network')) {
+      return { success: false, error: 'No se pudo conectar con la API de OpenAI. Verificá la conexión a internet.' }
+    }
+    if (mensaje.includes('timeout:')) {
+      return { success: false, error: 'La clasificación tardó demasiado y fue cancelada. Probá con una imagen más liviana o revisá la API.' }
     }
     return { success: false, error: `Error al procesar la imagen: ${mensaje}` }
   }

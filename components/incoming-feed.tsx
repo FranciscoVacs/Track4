@@ -12,6 +12,7 @@ const statusMeta: Record<FeedItem['status'], { label: string; bg: string; color:
   done: { label: 'Listo', bg: 'rgba(16,185,129,0.10)', color: '#047857' },
   defect: { label: 'Defecto', bg: 'rgba(229,36,33,0.10)', color: 'var(--lv-red)' },
   review: { label: 'Revisar', bg: 'rgba(245,130,32,0.12)', color: 'var(--lv-orange)' },
+  error: { label: 'Error', bg: 'rgba(229,36,33,0.10)', color: 'var(--lv-red)' },
 }
 
 function FeedImage({ src, seedId, alt }: { src: string; seedId: string; alt: string }) {
@@ -123,9 +124,12 @@ export function IncomingFeed({ items, onUpload }: IncomingFeedProps) {
                       </span>
                     )}
                   </div>
-                  <div className="text-[9.5px] text-[var(--muted-foreground)] tabular-nums mt-0.5">
-                    {item.timestamp}
-                  </div>
+                  <div className="text-[9.5px] text-[var(--muted-foreground)] tabular-nums mt-0.5">{item.timestamp}</div>
+                  {item.errorMessage && item.status === 'error' && (
+                    <div className="mt-0.5 text-[9px] font-medium leading-tight text-[var(--lv-red)] line-clamp-2">
+                      {item.errorMessage}
+                    </div>
+                  )}
                 </div>
                 <span
                   className="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-semibold tracking-wide whitespace-nowrap"

@@ -56,7 +56,7 @@ export default function Page() {
         shortName,
         image: objectUrl,
         timestamp: nowTimestamp(),
-        status: 'queued',
+        status: 'analyzing',
         source: 'upload',
       }
       dispatchUpload(feedItem)
