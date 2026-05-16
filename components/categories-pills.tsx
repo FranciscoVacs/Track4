@@ -25,7 +25,7 @@ export function CategoriesPills() {
       <div className="flex items-center gap-2.5 overflow-x-auto">
         <div className="flex items-center gap-2 shrink-0 pr-3">
           <span
-            className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-white/55"
+            className="text-[11px] font-bold uppercase tracking-[0.12em] text-white/70"
           >
             Categorías
           </span>
@@ -44,7 +44,7 @@ export function CategoriesPills() {
               transition={{ duration: 0.3, delay: 0.05 + i * 0.04, ease: 'easeOut' }}
               whileHover={reduce ? undefined : { scale: 1.04, y: -1 }}
               whileTap={reduce ? undefined : { scale: 0.97 }}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-semibold whitespace-nowrap transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap transition-colors"
               style={{
                 background: isSelected ? color : 'rgba(255,255,255,0.08)',
                 color: isSelected ? '#fff' : 'rgba(255,255,255,0.85)',
@@ -59,7 +59,7 @@ export function CategoriesPills() {
               />
               {c.name}
               <span
-                className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[9.5px] font-bold tabular-nums"
+                className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold tabular-nums"
                 style={{
                   background: isSelected ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.12)',
                   color: '#fff',

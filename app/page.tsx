@@ -91,12 +91,12 @@ export default function Page() {
             initial={{ opacity: 0, y: -10, x: 20 }}
             animate={{ opacity: 1, y: 0, x: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="fixed top-20 right-6 z-50 lv-card px-4 py-3 border-l-4 max-w-sm"
-            style={{ borderLeftColor: 'var(--lv-cyan)' }}
+            className="fixed top-20 right-6 z-50 lv-card px-4 py-3 max-w-sm"
+            style={{ border: '1.5px solid var(--lv-cyan)', boxShadow: '0 4px 20px rgba(17,165,214,0.15)' }}
             role="status"
           >
-            <div className="text-[10px] uppercase tracking-wider font-bold text-[var(--lv-cyan)]">Model retrained</div>
-            <div className="text-sm font-semibold text-[var(--lv-navy)] mt-0.5">v2.4 → v2.5 · accuracy 98.4 → 98.7%</div>
+            <div className="text-[11px] uppercase tracking-wider font-bold text-[var(--lv-cyan)]">Modelo reentrenado</div>
+            <div className="text-sm font-semibold text-[var(--lv-navy)] mt-0.5">v2.4 → v2.5 · precisión 98.4 → 98.7%</div>
             <button
               type="button"
               onClick={dismissRetrain}

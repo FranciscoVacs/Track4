@@ -37,9 +37,9 @@ export const OperatorQueue = forwardRef<
       className="lv-card p-4 h-[600px] flex flex-col"
     >
       <div className="flex items-center justify-between mb-3">
-        <span className="uppercase-label text-[10.5px]">Cola del operador</span>
+        <span className="uppercase-label text-[12px]">Cola del operador</span>
         <span
-          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9.5px] font-bold tabular-nums uppercase tracking-wider"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tabular-nums uppercase tracking-wider"
           style={{ background: 'rgba(245,130,32,0.12)', color: 'var(--lv-orange)' }}
         >
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--lv-orange)]" aria-hidden="true" />
@@ -100,80 +100,85 @@ export const OperatorQueue = forwardRef<
               />
 
               <div
-                className="rounded px-2.5 py-1.5 border-l-2 mb-2.5"
+                className="rounded-md px-3 py-2 mb-2.5"
                 style={{
                   background: `${colorVar(active.aiSuggestionColor)}14`,
-                  borderLeftColor: colorVar(active.aiSuggestionColor),
+                  border: `1px solid ${colorVar(active.aiSuggestionColor)}30`,
                 }}
               >
-                <div className="text-[9.5px] uppercase tracking-wider font-semibold text-[var(--muted-foreground)]">
+                <div className="text-[10px] uppercase tracking-wider font-semibold text-[var(--muted-foreground)]">
                   Clasificación sugerida
                 </div>
-                <div className="text-[11.5px] font-semibold text-[var(--lv-navy)] mt-0.5">
+                <div className="text-[12px] font-semibold text-[var(--lv-navy)] mt-0.5">
                   {active.aiSuggestion}
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1 mb-3">
+              <div className="flex flex-col gap-1.5 mb-3">
                 {active.topPredictions.map((p) => (
                   <div key={p.label} className="flex items-center gap-2">
-                    <span className="text-[9.5px] text-[var(--lv-text)] w-28 truncate">{p.label}</span>
-                    <div className="flex-1 h-1 rounded-full bg-[var(--lv-surface-3)] overflow-hidden">
+                    <span className="text-[11px] text-[var(--lv-text)] w-28 truncate">{p.label}</span>
+                    <div className="flex-1 h-1.5 rounded-full bg-[var(--lv-surface-3)] overflow-hidden">
                       <div
                         className="h-full rounded-full"
                         style={{ width: `${p.confidence}%`, background: colorVar(p.color) }}
                       />
                     </div>
-                    <span className="text-[9.5px] font-semibold tabular-nums w-8 text-right" style={{ color: colorVar(p.color) }}>
+                    <span className="text-[11px] font-semibold tabular-nums w-8 text-right" style={{ color: colorVar(p.color) }}>
                       {p.confidence}%
                     </span>
                   </div>
                 ))}
               </div>
 
-              <div className="mt-auto flex flex-col gap-1.5">
+              <div className="mt-auto flex flex-col gap-2">
+                {/* Primary action — dominant */}
                 <motion.button
                   type="button"
                   onClick={onDecide}
-                  whileHover={reduce ? undefined : { scale: 1.02 }}
+                  whileHover={reduce ? undefined : { scale: 1.015 }}
                   whileTap={reduce ? undefined : { scale: 0.97 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                  className="h-9 w-full rounded-full bg-[var(--lv-navy)] text-white text-[11.5px] font-semibold inline-flex items-center justify-center gap-1.5"
+                  className="h-11 w-full rounded-lg bg-[var(--lv-navy)] text-white text-[13px] font-bold inline-flex items-center justify-center gap-2"
                 >
-                  <Check className="h-3.5 w-3.5" /> Confirmar (es defecto)
+                  <Check className="h-4 w-4" /> Confirmar defecto
                 </motion.button>
+                {/* Secondary actions — row */}
+                <div className="flex gap-2">
+                  <motion.button
+                    type="button"
+                    onClick={onDecide}
+                    whileHover={reduce ? undefined : { scale: 1.015 }}
+                    whileTap={reduce ? undefined : { scale: 0.97 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                    className="h-9 flex-1 rounded-lg text-[var(--lv-navy)] text-[11px] font-semibold inline-flex items-center justify-center gap-1.5"
+                    style={{ background: 'var(--lv-surface-3)' }}
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" /> Otra categoría
+                    <ChevronDown className="h-3 w-3 opacity-50" />
+                  </motion.button>
+                  <motion.button
+                    type="button"
+                    onClick={onDecide}
+                    whileHover={reduce ? undefined : { scale: 1.015 }}
+                    whileTap={reduce ? undefined : { scale: 0.97 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                    className="h-9 flex-1 rounded-lg text-[var(--lv-navy)] text-[11px] font-semibold inline-flex items-center justify-center gap-1.5"
+                    style={{ background: 'var(--lv-surface-3)' }}
+                  >
+                    <X className="h-3.5 w-3.5" /> No es defecto
+                  </motion.button>
+                </div>
+                {/* Tertiary — deprioritized */}
                 <motion.button
                   type="button"
                   onClick={onDecide}
-                  whileHover={reduce ? undefined : { scale: 1.02 }}
+                  whileHover={reduce ? undefined : { opacity: 0.7 }}
                   whileTap={reduce ? undefined : { scale: 0.97 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                  className="h-9 w-full rounded-full bg-white text-[var(--lv-navy)] text-[11.5px] font-semibold inline-flex items-center justify-center gap-1.5"
-                  style={{ boxShadow: 'inset 0 0 0 1px var(--lv-navy)' }}
+                  className="h-7 w-full text-[var(--muted-foreground)] text-[10px] font-semibold inline-flex items-center justify-center gap-1"
                 >
-                  <RefreshCw className="h-3.5 w-3.5" /> Otra categoría
-                  <ChevronDown className="h-3 w-3 opacity-60" />
-                </motion.button>
-                <motion.button
-                  type="button"
-                  onClick={onDecide}
-                  whileHover={reduce ? undefined : { scale: 1.02 }}
-                  whileTap={reduce ? undefined : { scale: 0.97 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                  className="h-9 w-full rounded-full bg-white text-[var(--lv-navy)] text-[11.5px] font-semibold inline-flex items-center justify-center gap-1.5"
-                  style={{ boxShadow: 'inset 0 0 0 1px var(--lv-navy)' }}
-                >
-                  <X className="h-3.5 w-3.5" /> No es defecto
-                </motion.button>
-                <motion.button
-                  type="button"
-                  onClick={onDecide}
-                  whileHover={reduce ? undefined : { scale: 1.02 }}
-                  whileTap={reduce ? undefined : { scale: 0.97 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                  className="h-9 w-full rounded-full bg-transparent text-[var(--muted-foreground)] text-[11.5px] font-semibold inline-flex items-center justify-center gap-1.5"
-                >
-                  <SkipForward className="h-3.5 w-3.5" /> Omitir
+                  <SkipForward className="h-3 w-3" /> Omitir
                 </motion.button>
               </div>
             </motion.div>

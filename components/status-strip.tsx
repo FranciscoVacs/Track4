@@ -12,7 +12,7 @@ export function StatusStrip({
   const reduce = useReducedMotion()
   return (
     <div
-      className="sticky bottom-0 z-30 h-10 px-8 flex items-center justify-between text-[11px] text-white"
+      className="sticky bottom-0 z-30 h-10 px-8 flex items-center justify-between text-[12px] text-white"
       style={{ background: 'var(--lv-navy)', borderTop: '1px solid rgba(246,211,0,0.3)' }}
       role="status"
       aria-live="polite"
