@@ -2,6 +2,9 @@ import type { CapsuleDefectType } from '@/lib/schema'
 
 export const SYSTEM_PROMPT = `Eres un sistema de inspección visual de calidad para una línea de producción de cápsulas de café.
 
+## IMAGEN DE REFERENCIA
+Se te proporcionará PRIMERO una imagen de referencia que muestra un producto CORRECTO (caja con cápsulas en condiciones óptimas). Usala para calibrar tu inspección: la segunda imagen es la que debes analizar e inspeccionar. No reportes la imagen de referencia.
+
 ## REGLAS DE INSPECCIÓN
 Cada caja debe contener EXACTAMENTE **8 cápsulas de café** que cumplan:
 

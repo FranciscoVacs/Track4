@@ -1,7 +1,7 @@
 'use client'
 
 import { AnimatePresence, motion } from 'framer-motion'
-import { useRef } from 'react'
+import { useCallback, useRef } from 'react'
 import { TopNav } from '@/components/top-nav'
 import { HeroKpis } from '@/components/hero-kpis'
 import { CategoriesPills } from '@/components/categories-pills'
@@ -12,11 +12,24 @@ import { ModelLearningPool } from '@/components/model-learning-pool'
 import { FlyingCard } from '@/components/flying-card'
 import { TrainingParticle } from '@/components/training-particle'
 import { StatusStrip } from '@/components/status-strip'
-import { InspectionPanel } from '@/components/inspection-panel'
-import { useDemoEngine } from '@/lib/demo-engine'
+import { useDemoEngine, nowTimestamp } from '@/lib/demo-engine'
+import { classifyImage } from '@/app/actions/classify'
+import { buildSyntheticScenario } from '@/lib/image-utils'
+import type { FeedItem } from '@/lib/types'
 
 export default function Page() {
-  const { state, currentScenario, play, pause, replay, dismissRetrain, manualDecide } = useDemoEngine()
+  const {
+    state,
+    currentScenario,
+    play,
+    pause,
+    replay,
+    dismissRetrain,
+    dispatchUpload,
+    dispatchUserResult,
+    dispatchUserError,
+    manualDecide,
+  } = useDemoEngine()
 
   const incomingRef = useRef<HTMLDivElement>(null)
   const classifyingRef = useRef<HTMLDivElement>(null)
@@ -27,7 +40,43 @@ export default function Page() {
   const flyingFromRef = state.flyingCard?.from === 'incoming' ? incomingRef : classifyingRef
   const flyingToRef = state.flyingCard?.to === 'ai' ? classifyingRef : queueRef
 
-  const handleDecide = manualDecide
+  const handleDecide = useCallback(
+    (decision?: 'confirm' | 'override' | 'reject' | 'skip', feedback?: string) => {
+      manualDecide(decision, feedback)
+    },
+    [manualDecide],
+  )
+
+  const handleUpload = useCallback(
+    async (file: File, feedItemId: string, objectUrl: string) => {
+      const shortName = file.name.replace(/\.[^.]+$/, '').slice(0, 24) || 'Imagen subida'
+      const feedItem: FeedItem = {
+        id: `feed-${feedItemId}`,
+        scenarioId: feedItemId,
+        shortName,
+        image: objectUrl,
+        timestamp: nowTimestamp(),
+        status: 'queued',
+        source: 'upload',
+      }
+      dispatchUpload(feedItem)
+
+      const formData = new FormData()
+      formData.append('image', file)
+      try {
+        const result = await classifyImage(formData)
+        if (result.success) {
+          const scenario = buildSyntheticScenario(feedItemId, objectUrl, shortName, result.data)
+          dispatchUserResult(feedItemId, scenario)
+        } else {
+          dispatchUserError(feedItemId, result.error)
+        }
+      } catch {
+        dispatchUserError(feedItemId, 'Error de red al analizar la imagen')
+      }
+    },
+    [dispatchUpload, dispatchUserResult, dispatchUserError],
+  )
 
   return (
     <main className="min-h-screen flex flex-col" style={{ background: 'var(--lv-navy)' }}>
@@ -43,7 +92,7 @@ export default function Page() {
       <section className="px-8 py-6">
         <div className="grid grid-cols-12 gap-6">
           <div ref={incomingRef} className="col-span-12 lg:col-span-3">
-            <IncomingFeed items={state.feed} />
+            <IncomingFeed items={state.feed} onUpload={handleUpload} />
           </div>
           <div ref={classifyingRef} className="col-span-12 lg:col-span-5">
             <AiClassifying
@@ -66,13 +115,6 @@ export default function Page() {
 
         <div className="mt-6">
           <ModelLearningPool count={state.poolCount} decisions={state.poolDecisions} progressRef={poolProgressRef} />
-        </div>
-
-        <div className="mt-6">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-3">
-            Inspección manual
-          </div>
-          <InspectionPanel />
         </div>
       </section>
 
@@ -112,7 +154,7 @@ export default function Page() {
         )}
       </AnimatePresence>
 
-      {/* +1 NEW LABEL fly-in indicator (small toast) */}
+      {/* +1 NEW LABEL fly-in indicator */}
       <AnimatePresence>
         {state.phase === 'particle-to-pool' && (
           <motion.div

@@ -1,3 +1,6 @@
+import type { Scenario, ScenarioBox, ScenarioType } from '@/lib/types'
+import type { AIInspectionResult, Capsule } from '@/lib/schema'
+
 export const MAX_FILE_SIZE = 4_000_000 // 4 MB
 export const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const
 export type AllowedMimeType = (typeof ALLOWED_TYPES)[number]
@@ -29,4 +32,100 @@ export function getMimeType(file: File): AllowedMimeType {
 export async function fileToBase64(file: File): Promise<string> {
   const buffer = await file.arrayBuffer()
   return Buffer.from(buffer).toString('base64')
+}
+
+export const DEFECT_COLOR: Record<string, ScenarioBox['color']> = {
+  forma: 'orange',
+  color: 'orange',
+  dano: 'red',
+  posicion: 'cyan',
+}
+
+const DEFECT_LABEL: Record<string, string> = {
+  forma: 'Forma incorrecta',
+  color: 'Color incorrecto',
+  dano: 'Daño físico',
+  posicion: 'Posición incorrecta',
+}
+
+export function capsulesToBboxes(capsules: Capsule[]): ScenarioBox[] {
+  return capsules
+    .filter((c) => c.isDefective)
+    .map((c, i) => ({
+      id: `cap-${i}-${c.id}`,
+      top: `${c.top}%`,
+      left: `${c.left}%`,
+      width: `${c.width}%`,
+      height: `${c.height}%`,
+      color: DEFECT_COLOR[c.defectType ?? ''] ?? ('red' as ScenarioBox['color']),
+      label: c.defectType ?? 'defecto',
+      confidence: 95,
+    }))
+}
+
+function buildTopPredictions(result: AIInspectionResult): Scenario['topPredictions'] {
+  if (result.verdict === 'APPROVED') {
+    return [{ label: 'OK · Sin defectos', confidence: 99, color: 'cyan' }]
+  }
+  const counts: Record<string, number> = {}
+  for (const c of result.capsules) {
+    if (c.isDefective && c.defectType) {
+      counts[c.defectType] = (counts[c.defectType] ?? 0) + 1
+    }
+  }
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([type, count]) => ({
+      label: `${DEFECT_LABEL[type] ?? type} (×${count})`,
+      confidence: Math.max(70, 95 - count * 5),
+      color: (DEFECT_COLOR[type] ?? 'red') as 'red' | 'orange' | 'cyan' | 'navy',
+    }))
+}
+
+export function buildSyntheticScenario(
+  feedItemId: string,
+  imageUrl: string,
+  productShortName: string,
+  result: AIInspectionResult,
+): Scenario {
+  const isApproved = result.verdict === 'APPROVED'
+  const needsReview = result.requiresHumanReview
+  const defectCount = result.capsules.filter((c) => c.isDefective).length
+
+  let type: ScenarioType
+  let confidenceTone: Scenario['confidenceTone']
+  let verdictText: string
+  let verdictTone: Scenario['verdict']['tone']
+
+  if (isApproved) {
+    type = 'auto-ok'
+    confidenceTone = 'cyan'
+    verdictText = 'APROBADO · CLASIFICADO AUTOMÁTICAMENTE'
+    verdictTone = 'approved'
+  } else if (needsReview) {
+    type = 'review'
+    confidenceTone = 'orange'
+    verdictText = 'REQUIERE REVISIÓN HUMANA'
+    verdictTone = 'review'
+  } else {
+    type = 'auto-defect'
+    confidenceTone = 'red'
+    verdictText = `DEFECTO DETECTADO · ${defectCount} cápsula${defectCount !== 1 ? 's' : ''}`
+    verdictTone = 'defect'
+  }
+
+  return {
+    id: feedItemId,
+    image: imageUrl,
+    productName: 'Cápsulas LaVirginia (imagen subida)',
+    shortName: productShortName,
+    camera: 'CAM 03',
+    type,
+    finalConfidence: isApproved ? 96 : needsReview ? 62 : 88,
+    confidenceTone,
+    topPredictions: buildTopPredictions(result),
+    bboxes: capsulesToBboxes(result.capsules),
+    verdict: { text: verdictText, tone: verdictTone },
+  }
 }

@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useReducer, useRef } from 'react'
-import { scenarios, initialQueue, initialPoolDecisions } from './demo-script'
-import type { FeedItem, Phase, PoolDecision, Scenario } from './types'
+import { initialPoolDecisions } from './demo-script'
+import type { FeedItem, Phase, PoolDecision, Scenario, UserItemResult } from './types'
 
 type QueueEntry = {
   id: string
@@ -34,38 +34,34 @@ export type DemoState = {
   retrainToast: boolean
   learnedBadge: boolean
   oscillationIndex: number
+  userUploadQueue: string[]
+  userItemResults: Record<string, UserItemResult>
 }
-
-const baseFeed: FeedItem[] = [
-  { id: 'f-a', scenarioId: '', shortName: 'Yerba Mate 1kg', image: 'https://placehold.co/120x120/F7F7F4/242E8F?text=Y1', timestamp: '14:30:48', status: 'done' },
-  { id: 'f-b', scenarioId: '', shortName: 'Café Molido 500g', image: 'https://placehold.co/120x120/F7F7F4/F58220?text=C5', timestamp: '14:30:32', status: 'done' },
-  { id: 'f-c', scenarioId: '', shortName: 'Té caja', image: 'https://placehold.co/120x120/F7F7F4/242E8F?text=TC', timestamp: '14:30:14', status: 'review' },
-  { id: 'f-d', scenarioId: '', shortName: 'Yerba Mate 500g', image: 'https://placehold.co/120x120/F7F7F4/F6D300?text=Y5', timestamp: '14:29:51', status: 'defect' },
-]
 
 const initialState: DemoState = {
   playState: 'idle',
   scenarioIndex: -1,
   phase: 'idle',
   currentScenarioId: null,
-  feed: baseFeed,
-  queue: initialQueue,
+  feed: [],
+  queue: [],
   poolCount: 38,
   poolDecisions: initialPoolDecisions,
-  kpis: { inspected: 247, autoPct: 98.4, awaitingReview: 12, defectsFlagged: 12 },
+  kpis: { inspected: 247, autoPct: 98.4, awaitingReview: 0, defectsFlagged: 12 },
   flyingCard: null,
   particleKey: 0,
   retrainToast: false,
   learnedBadge: false,
   oscillationIndex: 0,
+  userUploadQueue: [],
+  userItemResults: {},
 }
 
 type Action =
   | { type: 'PLAY' }
   | { type: 'PAUSE' }
   | { type: 'RESET' }
-  | { type: 'COMPLETE' }
-  | { type: 'START_SCENARIO'; index: number; scenario: Scenario }
+  | { type: 'IDLE' }
   | { type: 'PHASE'; phase: Phase }
   | { type: 'FLYING'; from: 'incoming' | 'ai'; to: 'ai' | 'queue'; scenarioId: string }
   | { type: 'CLEAR_FLYING' }
@@ -79,8 +75,11 @@ type Action =
   | { type: 'DECREMENT_REVIEW' }
   | { type: 'SHOW_RETRAIN' }
   | { type: 'HIDE_RETRAIN' }
-  | { type: 'SHOW_LEARNED'; visible: boolean }
   | { type: 'ADD_QUEUE_FROM_DEMO'; entry: QueueEntry }
+  | { type: 'ENQUEUE_USER_ITEM'; item: FeedItem }
+  | { type: 'USER_ITEM_RESULT_READY'; feedItemId: string; scenario: Scenario }
+  | { type: 'USER_ITEM_RESULT_ERROR'; feedItemId: string; error: string }
+  | { type: 'START_USER_SCENARIO'; feedItemId: string; scenario: Scenario }
 
 function reducer(state: DemoState, action: Action): DemoState {
   switch (action.type) {
@@ -88,31 +87,18 @@ function reducer(state: DemoState, action: Action): DemoState {
       return { ...state, playState: 'playing' }
     case 'PAUSE':
       return { ...state, playState: 'paused' }
-    case 'COMPLETE':
-      return { ...state, playState: 'completed', phase: 'idle', currentScenarioId: null, flyingCard: null }
+    case 'IDLE':
+      return { ...state, phase: 'idle', currentScenarioId: null, flyingCard: null }
     case 'RESET':
-      return { ...initialState, playState: 'playing' }
-    case 'START_SCENARIO': {
-      const sc = action.scenario
-      const ts = nowStamp()
-      const newFeed: FeedItem = {
-        id: `feed-${sc.id}-${Date.now()}`,
-        scenarioId: sc.id,
-        shortName: sc.shortName,
-        image: sc.image,
-        timestamp: ts,
-        status: 'queued',
-      }
       return {
-        ...state,
-        scenarioIndex: action.index,
-        currentScenarioId: sc.id,
-        phase: 'arriving',
-        feed: [newFeed, ...state.feed].slice(0, 5),
-        kpis: { ...state.kpis, inspected: state.kpis.inspected + 1 },
-        learnedBadge: false,
+        ...initialState,
+        playState: 'playing',
+        userUploadQueue: state.userUploadQueue,
+        userItemResults: state.userItemResults,
+        feed: state.feed,
+        queue: state.queue,
+        kpis: state.kpis,
       }
-    }
     case 'PHASE': {
       const phase = action.phase
       let feed = state.feed
@@ -120,7 +106,7 @@ function reducer(state: DemoState, action: Action): DemoState {
         let status: FeedItem['status'] = 'queued'
         if (phase === 'flying-to-ai' || phase === 'scanning' || phase === 'barcode' || phase === 'bboxes') status = 'analyzing'
         else if (phase === 'verdict') {
-          const sc = scenarios.find((s) => s.id === state.currentScenarioId)
+          const sc = state.userItemResults[state.currentScenarioId]?.scenario
           if (sc?.type === 'auto-defect' || sc?.type === 'learned-defect') status = 'defect'
           else if (sc?.type === 'review') status = 'review'
           else status = 'done'
@@ -150,25 +136,10 @@ function reducer(state: DemoState, action: Action): DemoState {
     }
     case 'DECREMENT_QUEUE': {
       if (state.queue.length === 0) return state
-      const remaining = state.queue.slice(1)
-      // Recycle: if queue would be empty, refill with initial items
-      if (remaining.length === 0) {
-        const recycled = initialQueue.map((item, i) => ({
-          ...item,
-          id: `${item.id}-r${Date.now()}-${i}`,
-        }))
-        return { ...state, queue: recycled }
-      }
-      return { ...state, queue: remaining }
+      return { ...state, queue: state.queue.slice(1) }
     }
     case 'INCREMENT_AUTO':
-      return {
-        ...state,
-        kpis: {
-          ...state.kpis,
-          autoPct: Math.min(99.5, state.kpis.autoPct + 0.05),
-        },
-      }
+      return { ...state, kpis: { ...state.kpis, autoPct: Math.min(99.5, state.kpis.autoPct + 0.1) } }
     case 'INCREMENT_DEFECT':
       return { ...state, kpis: { ...state.kpis, defectsFlagged: state.kpis.defectsFlagged + 1 } }
     case 'INCREMENT_REVIEW':
@@ -179,10 +150,43 @@ function reducer(state: DemoState, action: Action): DemoState {
       return { ...state, retrainToast: true }
     case 'HIDE_RETRAIN':
       return { ...state, retrainToast: false }
-    case 'SHOW_LEARNED':
-      return { ...state, learnedBadge: action.visible }
     case 'ADD_QUEUE_FROM_DEMO':
       return { ...state, queue: [action.entry, ...state.queue] }
+    case 'ENQUEUE_USER_ITEM':
+      return {
+        ...state,
+        feed: [action.item, ...state.feed].slice(0, 6),
+        userUploadQueue: [...state.userUploadQueue, action.item.scenarioId],
+        userItemResults: {
+          ...state.userItemResults,
+          [action.item.scenarioId]: { feedItemId: action.item.scenarioId, status: 'pending', scenario: null },
+        },
+      }
+    case 'USER_ITEM_RESULT_READY':
+      return {
+        ...state,
+        userItemResults: {
+          ...state.userItemResults,
+          [action.feedItemId]: { feedItemId: action.feedItemId, status: 'ready', scenario: action.scenario },
+        },
+      }
+    case 'USER_ITEM_RESULT_ERROR':
+      return {
+        ...state,
+        userItemResults: {
+          ...state.userItemResults,
+          [action.feedItemId]: { feedItemId: action.feedItemId, status: 'error', scenario: null, error: action.error },
+        },
+      }
+    case 'START_USER_SCENARIO':
+      return {
+        ...state,
+        currentScenarioId: action.feedItemId,
+        phase: 'arriving',
+        userUploadQueue: state.userUploadQueue.filter((id) => id !== action.feedItemId),
+        kpis: { ...state.kpis, inspected: state.kpis.inspected + 1 },
+        learnedBadge: false,
+      }
     default:
       return state
   }
@@ -194,6 +198,10 @@ function nowStamp(): string {
 }
 function pad(n: number) {
   return String(n).padStart(2, '0')
+}
+
+export function nowTimestamp(): string {
+  return nowStamp()
 }
 
 export function useDemoEngine() {
@@ -216,66 +224,65 @@ export function useDemoEngine() {
     timersRef.current.push(t)
   }, [])
 
-  const runScenario = useCallback(
-    (i: number) => {
-      if (!playingRef.current) return
-      const sc = scenarios[i]
-      if (!sc) return
+  const runUserItemRef = useRef<(id: string, attempt?: number) => void>(() => {})
 
-      dispatch({ type: 'START_SCENARIO', index: i, scenario: sc })
+  const advanceQueue = useCallback(() => {
+    if (!playingRef.current) return
+    const st = stateRef.current
+    if (st.userUploadQueue.length > 0) {
+      const nextId = st.userUploadQueue[0]
+      runUserItemRef.current(nextId, 0)
+      return
+    }
+    dispatch({ type: 'IDLE' })
+  }, [])
+
+  const runUserItem = useCallback(
+    (feedItemId: string, attempt = 0) => {
+      if (!playingRef.current) return
+
+      const result = stateRef.current.userItemResults[feedItemId]
+      if (!result || result.status === 'pending') {
+        if (attempt >= 33) {
+          // 10s timeout — skip silently
+          dispatch({ type: 'USER_ITEM_RESULT_ERROR', feedItemId, error: 'Timeout' })
+          schedule(200, () => advanceQueue())
+          return
+        }
+        const t = setTimeout(() => runUserItemRef.current(feedItemId, attempt + 1), 300)
+        timersRef.current.push(t)
+        return
+      }
+      if (result.status === 'error' || !result.scenario) {
+        schedule(200, () => advanceQueue())
+        return
+      }
+
+      const sc = result.scenario
+      dispatch({ type: 'START_USER_SCENARIO', feedItemId, scenario: sc })
 
       let t = 0
-      // Arriving — image lands in feed (already added in START). Hold so audience sees it.
       t += 1400
 
-      // Fly from incoming to AI
       schedule(t, () => {
         dispatch({ type: 'PHASE', phase: 'flying-to-ai' })
-        dispatch({ type: 'FLYING', from: 'incoming', to: 'ai', scenarioId: sc.id })
+        dispatch({ type: 'FLYING', from: 'incoming', to: 'ai', scenarioId: feedItemId })
       })
       t += 1100
       schedule(t, () => dispatch({ type: 'CLEAR_FLYING' }))
-
-      // Scanning — slowed down so the audience can see the scan line sweep
       schedule(t, () => dispatch({ type: 'PHASE', phase: 'scanning' }))
-      t += sc.hasBarcode ? 1100 : 2600
+      t += 2600
 
-      // Barcode overlay
-      if (sc.hasBarcode) {
-        schedule(t, () => dispatch({ type: 'PHASE', phase: 'barcode' }))
-        t += 1800
-        schedule(t, () => dispatch({ type: 'PHASE', phase: 'scanning' }))
-        t += 1100
-      }
-
-      // Bboxes
       schedule(t, () => dispatch({ type: 'PHASE', phase: 'bboxes' }))
+      t += 1500
 
-      // Oscillation for review type — much slower so audience sees the competing predictions
-      if (sc.type === 'review' && sc.oscillation) {
-        sc.oscillation.forEach((_, idx) => {
-          schedule(t + idx * 750, () => dispatch({ type: 'OSCILLATE', index: idx }))
-        })
-        t += sc.oscillation.length * 750
-      } else {
-        t += 1500
-      }
-
-      // Show learned badge for s5
-      if (sc.showLearnedBadge) {
-        schedule(t, () => dispatch({ type: 'SHOW_LEARNED', visible: true }))
-        schedule(t + 2800, () => dispatch({ type: 'SHOW_LEARNED', visible: false }))
-      }
-
-      // Verdict — hold longer so the audience can read it
       schedule(t, () => dispatch({ type: 'PHASE', phase: 'verdict' }))
       t += 2400
 
       if (sc.type === 'review') {
-        // Fly card from AI to operator queue
         schedule(t, () => {
           dispatch({ type: 'PHASE', phase: 'flying-to-queue' })
-          dispatch({ type: 'FLYING', from: 'ai', to: 'queue', scenarioId: sc.id })
+          dispatch({ type: 'FLYING', from: 'ai', to: 'queue', scenarioId: feedItemId })
           dispatch({ type: 'INCREMENT_REVIEW' })
         })
         t += 1300
@@ -285,94 +292,52 @@ export function useDemoEngine() {
           dispatch({
             type: 'ADD_QUEUE_FROM_DEMO',
             entry: {
-              id: `demo-${sc.id}`,
+              id: `upload-${feedItemId}`,
               image: sc.image,
               productName: sc.productName,
-              aiSuggestion: sc.aiSuggestion ?? 'Etiqueta desalineada (58%)',
+              aiSuggestion: sc.verdict.text,
               aiSuggestionColor: 'orange',
               topPredictions: sc.topPredictions,
-              fromDemo: true,
             },
           })
-        })
-        // Auto-decide after 3.8s — but only if the demo item is still in queue
-        t += 3800
-        schedule(t, () => {
-          const q = stateRef.current.queue
-          const demoId = `demo-${sc.id}`
-          const stillInQueue = q.some((item) => item.id === demoId)
-          if (!stillInQueue) {
-            // User already manually decided this item, skip auto-decide
-            dispatch({ type: 'PHASE', phase: 'operator-decided' })
-            return
-          }
-          dispatch({ type: 'PHASE', phase: 'operator-decided' })
-          dispatch({ type: 'DECREMENT_QUEUE' })
-          dispatch({ type: 'DECREMENT_REVIEW' })
         })
         t += 500
-        // Training particle
-        schedule(t, () => {
-          dispatch({ type: 'PHASE', phase: 'particle-to-pool' })
-          dispatch({ type: 'EMIT_PARTICLE' })
-        })
-        t += 1400
-        schedule(t, () => {
-          dispatch({
-            type: 'INCREMENT_POOL',
-            decision: {
-              id: `pd-${sc.id}-${Date.now()}`,
-              initial: 'M.G',
-              timestamp: nowStamp(),
-              decisionColor: 'red',
-              label: 'Etiqueta desalineada',
-            },
-          })
-        })
-        t += 1000
+        // Advance to next upload immediately — operator decides in their own time
+        schedule(t, () => advanceQueue())
       } else {
-        // Auto-classify path — hold the verdict, then leave
-        if (sc.type === 'auto-defect' || sc.type === 'learned-defect') {
+        if (sc.type === 'auto-defect') {
           schedule(t, () => dispatch({ type: 'INCREMENT_DEFECT' }))
         } else {
           schedule(t, () => dispatch({ type: 'INCREMENT_AUTO' }))
         }
         schedule(t, () => dispatch({ type: 'PHASE', phase: 'leaving' }))
         t += 1300
+        schedule(t, () => advanceQueue())
       }
-
-      // Next scenario or loop
-      schedule(t, () => {
-        if (i < scenarios.length - 1) {
-          runScenario(i + 1)
-        } else {
-          dispatch({ type: 'COMPLETE' })
-          // pause 4s and loop
-          schedule(4000, () => {
-            if (!playingRef.current) return
-            dispatch({ type: 'RESET' })
-            // small delay to let reset render
-            schedule(200, () => runScenario(0))
-          })
-        }
-      })
     },
-    [schedule],
+    [schedule, advanceQueue],
   )
+
+  runUserItemRef.current = runUserItem
+
+  // Kick off processing whenever a result becomes ready and the engine is idle
+  useEffect(() => {
+    if (!playingRef.current) return
+    if (state.phase !== 'idle') return
+    if (state.currentScenarioId !== null) return
+    if (state.userUploadQueue.length === 0) return
+    const nextId = state.userUploadQueue[0]
+    const result = state.userItemResults[nextId]
+    if (!result || result.status !== 'ready') return
+    runUserItemRef.current(nextId, 0)
+  }, [state.phase, state.currentScenarioId, state.userUploadQueue, state.userItemResults, state.playState])
 
   const play = useCallback(() => {
     if (playingRef.current) return
     playingRef.current = true
     clearTimers()
-    if (stateRef.current.playState === 'completed' || stateRef.current.scenarioIndex >= scenarios.length - 1) {
-      dispatch({ type: 'RESET' })
-      schedule(200, () => runScenario(0))
-    } else {
-      dispatch({ type: 'PLAY' })
-      const nextIdx = Math.max(0, stateRef.current.scenarioIndex)
-      runScenario(nextIdx === -1 ? 0 : nextIdx)
-    }
-  }, [clearTimers, runScenario, schedule])
+    dispatch({ type: 'PLAY' })
+  }, [clearTimers])
 
   const pause = useCallback(() => {
     playingRef.current = false
@@ -385,41 +350,73 @@ export function useDemoEngine() {
     clearTimers()
     dispatch({ type: 'RESET' })
     playingRef.current = true
-    setTimeout(() => runScenario(0), 200)
-  }, [clearTimers, runScenario])
+  }, [clearTimers])
 
   const dismissRetrain = useCallback(() => {
     dispatch({ type: 'HIDE_RETRAIN' })
   }, [])
 
-  const manualDecide = useCallback(() => {
-    const s = stateRef.current
-    if (s.queue.length === 0) return
-    dispatch({ type: 'DECREMENT_QUEUE' })
-    dispatch({ type: 'DECREMENT_REVIEW' })
-    dispatch({ type: 'EMIT_PARTICLE' })
-    // Add to pool after a short delay to sync with particle animation
-    setTimeout(() => {
-      dispatch({
-        type: 'INCREMENT_POOL',
-        decision: {
-          id: `pd-manual-${Date.now()}`,
-          initial: 'M.G',
-          timestamp: nowStamp(),
-          decisionColor: 'navy',
-          label: 'Decisión manual',
-        },
-      })
-    }, 800)
+  const dispatchUpload = useCallback((item: FeedItem) => {
+    dispatch({ type: 'ENQUEUE_USER_ITEM', item })
   }, [])
 
-  // Auto-play on mount after 1s
+  const dispatchUserResult = useCallback((feedItemId: string, scenario: Scenario) => {
+    dispatch({ type: 'USER_ITEM_RESULT_READY', feedItemId, scenario })
+  }, [])
+
+  const dispatchUserError = useCallback((feedItemId: string, error: string) => {
+    dispatch({ type: 'USER_ITEM_RESULT_ERROR', feedItemId, error })
+  }, [])
+
+  // Called by operator queue buttons — removes item, emits particle to pool
+  const manualDecide = useCallback(
+    (decision?: 'confirm' | 'override' | 'reject' | 'skip', feedback?: string) => {
+      const s = stateRef.current
+      if (s.queue.length === 0) return
+      dispatch({ type: 'DECREMENT_QUEUE' })
+      dispatch({ type: 'DECREMENT_REVIEW' })
+
+      // Skip doesn't add to the learning pool
+      if (decision === 'skip') return
+
+      const decisionColor: PoolDecision['decisionColor'] =
+        decision === 'reject' ? 'navy' : decision === 'override' ? 'orange' : 'red'
+      const label =
+        feedback?.trim()
+          ? feedback.trim().slice(0, 60)
+          : decision === 'reject'
+            ? 'No es defecto'
+            : decision === 'override'
+              ? 'Otra categoría'
+              : 'Defecto confirmado'
+
+      const t1 = setTimeout(() => {
+        dispatch({ type: 'EMIT_PARTICLE' })
+        const t2 = setTimeout(() => {
+          dispatch({
+            type: 'INCREMENT_POOL',
+            decision: {
+              id: `manual-${Date.now()}`,
+              initial: 'OP',
+              timestamp: nowStamp(),
+              decisionColor,
+              label,
+            },
+          })
+        }, 1400)
+        timersRef.current.push(t2)
+      }, 300)
+      timersRef.current.push(t1)
+    },
+    [],
+  )
+
+  // Auto-enable on mount so uploads process immediately without pressing play
   useEffect(() => {
     const t = setTimeout(() => {
       playingRef.current = true
       dispatch({ type: 'PLAY' })
-      runScenario(0)
-    }, 1000)
+    }, 500)
     return () => {
       clearTimeout(t)
       playingRef.current = false
@@ -437,7 +434,7 @@ export function useDemoEngine() {
   }, [state.retrainToast])
 
   const currentScenario: Scenario | null = state.currentScenarioId
-    ? scenarios.find((s) => s.id === state.currentScenarioId) ?? null
+    ? (state.userItemResults[state.currentScenarioId]?.scenario ?? null)
     : null
 
   return {
@@ -447,6 +444,9 @@ export function useDemoEngine() {
     pause,
     replay,
     dismissRetrain,
+    dispatchUpload,
+    dispatchUserResult,
+    dispatchUserError,
     manualDecide,
   }
 }

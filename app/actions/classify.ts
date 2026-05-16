@@ -6,6 +6,28 @@ import { AIInspectionResultSchema, type AIInspectionResult } from '@/lib/schema'
 import { SYSTEM_PROMPT, buildUserPrompt } from '@/lib/prompts'
 import { validateImage, getMimeType, fileToBase64 } from '@/lib/image-utils'
 
+let _referenceBase64: string | null = null
+async function getReferenceBase64(): Promise<string | null> {
+  if (_referenceBase64) return _referenceBase64
+  try {
+    const { readFile } = await import('fs/promises')
+    const { join } = await import('path')
+    const candidates = ['p4.jpeg', 'p4.jpg']
+    for (const name of candidates) {
+      try {
+        const buf = await readFile(join(process.cwd(), 'public/products', name))
+        _referenceBase64 = buf.toString('base64')
+        return _referenceBase64
+      } catch {
+        // try next
+      }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 type ClassifySuccess = { success: true; data: AIInspectionResult & { model: string; processingMs: number } }
 type ClassifyError = { success: false; error: string }
 type ClassifyResult = ClassifySuccess | ClassifyError
@@ -33,6 +55,17 @@ export async function classifyImage(formData: FormData): Promise<ClassifyResult>
   }
 
   const inicio = Date.now()
+  const referenceB64 = await getReferenceBase64()
+
+  type ContentPart = { type: 'text'; text: string } | { type: 'image'; image: string }
+  const imageContent: ContentPart[] = []
+  if (referenceB64) {
+    imageContent.push({ type: 'text', text: 'IMAGEN DE REFERENCIA (producto correcto — no inspeccionar):' })
+    imageContent.push({ type: 'image', image: `data:image/jpeg;base64,${referenceB64}` })
+    imageContent.push({ type: 'text', text: 'IMAGEN A INSPECCIONAR:' })
+  }
+  imageContent.push({ type: 'image', image: `data:${mimeType};base64,${base64}` })
+  imageContent.push({ type: 'text', text: buildUserPrompt(typeof boxId === 'string' ? boxId : undefined) })
 
   try {
     const { object } = await generateObject({
@@ -40,21 +73,8 @@ export async function classifyImage(formData: FormData): Promise<ClassifyResult>
       schema: AIInspectionResultSchema,
       system: SYSTEM_PROMPT,
       temperature: 0,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              image: `data:${mimeType};base64,${base64}`,
-            },
-            {
-              type: 'text',
-              text: buildUserPrompt(typeof boxId === 'string' ? boxId : undefined),
-            },
-          ],
-        },
-      ],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      messages: [{ role: 'user', content: imageContent as any }],
     })
 
     const processingMs = Date.now() - inicio
@@ -105,6 +125,17 @@ export async function classifyImageHighAccuracy(formData: FormData): Promise<Cla
   }
 
   const inicio = Date.now()
+  const referenceB64High = await getReferenceBase64()
+
+  type ContentPartHigh = { type: 'text'; text: string } | { type: 'image'; image: string }
+  const imageContentHigh: ContentPartHigh[] = []
+  if (referenceB64High) {
+    imageContentHigh.push({ type: 'text', text: 'IMAGEN DE REFERENCIA (producto correcto — no inspeccionar):' })
+    imageContentHigh.push({ type: 'image', image: `data:image/jpeg;base64,${referenceB64High}` })
+    imageContentHigh.push({ type: 'text', text: 'IMAGEN A INSPECCIONAR:' })
+  }
+  imageContentHigh.push({ type: 'image', image: `data:${mimeType};base64,${base64}` })
+  imageContentHigh.push({ type: 'text', text: buildUserPrompt(typeof boxId === 'string' ? boxId : undefined) })
 
   try {
     const { object } = await generateObject({
@@ -112,21 +143,8 @@ export async function classifyImageHighAccuracy(formData: FormData): Promise<Cla
       schema: AIInspectionResultSchema,
       system: SYSTEM_PROMPT,
       temperature: 0,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              image: `data:${mimeType};base64,${base64}`,
-            },
-            {
-              type: 'text',
-              text: buildUserPrompt(typeof boxId === 'string' ? boxId : undefined),
-            },
-          ],
-        },
-      ],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      messages: [{ role: 'user', content: imageContentHigh as any }],
     })
 
     const processingMs = Date.now() - inicio

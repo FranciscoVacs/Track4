@@ -43,6 +43,8 @@ export type Scenario = {
   aiSuggestion?: string
 }
 
+export type FeedItemSource = 'demo' | 'upload'
+
 export type FeedItem = {
   id: string
   scenarioId: string
@@ -50,6 +52,14 @@ export type FeedItem = {
   image: string
   timestamp: string
   status: 'queued' | 'analyzing' | 'done' | 'defect' | 'review'
+  source: FeedItemSource
+}
+
+export type UserItemResult = {
+  feedItemId: string
+  status: 'pending' | 'ready' | 'error'
+  scenario: Scenario | null
+  error?: string
 }
 
 export type Phase =

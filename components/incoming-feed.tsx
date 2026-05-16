@@ -1,8 +1,10 @@
 'use client'
 
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { Upload } from 'lucide-react'
 import type { FeedItem } from '@/lib/types'
+import { validateImage } from '@/lib/image-utils'
 
 const statusMeta: Record<FeedItem['status'], { label: string; bg: string; color: string }> = {
   queued: { label: 'En cola', bg: 'rgba(17,165,214,0.10)', color: 'var(--lv-cyan)' },
@@ -26,8 +28,33 @@ function FeedImage({ src, seedId, alt }: { src: string; seedId: string; alt: str
   )
 }
 
-export function IncomingFeed({ items }: { items: FeedItem[] }) {
+type IncomingFeedProps = {
+  items: FeedItem[]
+  onUpload: (file: File, feedItemId: string, objectUrl: string) => void
+}
+
+export function IncomingFeed({ items, onUpload }: IncomingFeedProps) {
   const reduce = useReducedMotion()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const validation = validateImage(file)
+    if (!validation.valid) {
+      setUploadError(validation.error ?? 'Archivo inválido')
+      e.target.value = ''
+      return
+    }
+
+    setUploadError(null)
+    const objectUrl = URL.createObjectURL(file)
+    const feedItemId = `upload-${Date.now()}`
+    onUpload(file, feedItemId, objectUrl)
+    e.target.value = ''
+  }
 
   return (
     <motion.div
@@ -59,6 +86,7 @@ export function IncomingFeed({ items }: { items: FeedItem[] }) {
             const meta = statusMeta[item.status]
             const fadeOpacity = Math.max(0.55, 1 - idx * 0.12)
             const isActive = idx === 0
+            const isUpload = item.source === 'upload'
             return (
               <motion.div
                 key={item.id}
@@ -81,8 +109,19 @@ export function IncomingFeed({ items }: { items: FeedItem[] }) {
                 )}
                 <FeedImage src={item.image} seedId={item.id} alt={item.shortName} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-[11.5px] font-semibold text-[var(--lv-text)] truncate leading-tight">
-                    {item.shortName}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11.5px] font-semibold text-[var(--lv-text)] truncate leading-tight">
+                      {item.shortName}
+                    </span>
+                    {isUpload && (
+                      <span
+                        className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[8px] font-bold tracking-wide shrink-0"
+                        style={{ background: 'rgba(17,165,214,0.12)', color: 'var(--lv-cyan)' }}
+                      >
+                        <Upload className="h-2 w-2" aria-hidden="true" />
+                        Subida
+                      </span>
+                    )}
                   </div>
                   <div className="text-[9.5px] text-[var(--muted-foreground)] tabular-nums mt-0.5">
                     {item.timestamp}
@@ -101,9 +140,46 @@ export function IncomingFeed({ items }: { items: FeedItem[] }) {
       </div>
 
       <div className="pt-2 mt-2 lv-divider" />
+
+      <div className="pt-2">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={handleFileChange}
+          aria-label="Agregar imagen a la cola de inspección"
+        />
+        <button
+          type="button"
+          onClick={() => {
+            setUploadError(null)
+            fileInputRef.current?.click()
+          }}
+          className="w-full flex items-center justify-center gap-2 py-2 rounded-md border border-dashed text-[10px] font-semibold uppercase tracking-wider transition-colors hover:bg-[rgba(17,165,214,0.05)]"
+          style={{ borderColor: 'rgba(17,165,214,0.3)', color: 'var(--lv-cyan)' }}
+        >
+          <Upload className="h-3 w-3" aria-hidden="true" />
+          Agregar imagen a la cola
+        </button>
+        <AnimatePresence>
+          {uploadError && (
+            <motion.p
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="mt-1.5 text-[9.5px] font-medium"
+              style={{ color: 'var(--lv-red)' }}
+            >
+              {uploadError}
+            </motion.p>
+          )}
+        </AnimatePresence>
+      </div>
+
       <div className="pt-2 text-[9.5px] text-[var(--muted-foreground)] flex items-center justify-between">
         <span className="font-mono">cam-03.lv-factory.local</span>
-        <span className="tabular-nums">{items.length}/5</span>
+        <span className="tabular-nums">{items.length}/6</span>
       </div>
     </motion.div>
   )
