@@ -33,7 +33,7 @@ export type Scenario = {
   topPredictions: { label: string; confidence: number; color: 'red' | 'orange' | 'cyan' | 'navy' }[]
   oscillation?: number[]
   finalConfidence: number
-  confidenceTone: 'navy' | 'orange' | 'red'
+  confidenceTone: 'navy' | 'orange' | 'red' | 'cyan'
   bboxes: ScenarioBox[]
   verdict: {
     text: string

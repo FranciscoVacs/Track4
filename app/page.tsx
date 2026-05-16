@@ -12,6 +12,7 @@ import { ModelLearningPool } from '@/components/model-learning-pool'
 import { FlyingCard } from '@/components/flying-card'
 import { TrainingParticle } from '@/components/training-particle'
 import { StatusStrip } from '@/components/status-strip'
+import { InspectionPanel } from '@/components/inspection-panel'
 import { useDemoEngine } from '@/lib/demo-engine'
 
 export default function Page() {
@@ -65,6 +66,13 @@ export default function Page() {
 
         <div className="mt-6">
           <ModelLearningPool count={state.poolCount} decisions={state.poolDecisions} progressRef={poolProgressRef} />
+        </div>
+
+        <div className="mt-6">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-3">
+            Inspección manual
+          </div>
+          <InspectionPanel />
         </div>
       </section>
 
