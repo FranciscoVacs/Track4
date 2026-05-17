@@ -87,7 +87,7 @@ export default function Page() {
         awaitingReview={state.kpis.awaitingReview}
         modelProgress={state.poolCount}
       />
-      <CategoriesPills />
+      <CategoriesPills counts={state.categoryCounts} />
 
       <section className="px-8 py-6">
         <div className="grid grid-cols-12 gap-6">

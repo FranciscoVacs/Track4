@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useReducer, useRef } from 'react'
-import { initialPoolDecisions } from './demo-script'
+import { categories, categoryIdFromLabel, initialPoolDecisions } from './demo-script'
 import type { FeedItem, Phase, PoolDecision, Scenario, UserItemResult } from './types'
 
 type QueueEntry = {
@@ -36,7 +36,13 @@ export type DemoState = {
   oscillationIndex: number
   userUploadQueue: string[]
   userItemResults: Record<string, UserItemResult>
+  categoryCounts: Record<string, number>
 }
+
+const emptyCategoryCounts: Record<string, number> = categories.reduce(
+  (acc, c) => ({ ...acc, [c.id]: 0 }),
+  {} as Record<string, number>,
+)
 
 const initialState: DemoState = {
   playState: 'idle',
@@ -55,6 +61,7 @@ const initialState: DemoState = {
   oscillationIndex: 0,
   userUploadQueue: [],
   userItemResults: {},
+  categoryCounts: emptyCategoryCounts,
 }
 
 type Action =
@@ -81,6 +88,7 @@ type Action =
   | { type: 'USER_ITEM_RESULT_ERROR'; feedItemId: string; error: string }
   | { type: 'START_USER_SCENARIO'; feedItemId: string; scenario: Scenario }
   | { type: 'REMOVE_FEED_ITEM'; feedItemId: string }
+  | { type: 'INCREMENT_CATEGORY'; categoryId: string }
 
 function reducer(state: DemoState, action: Action): DemoState {
   switch (action.type) {
@@ -193,6 +201,14 @@ function reducer(state: DemoState, action: Action): DemoState {
         ...state,
         feed: state.feed.filter((f) => f.scenarioId !== action.feedItemId),
       }
+    case 'INCREMENT_CATEGORY':
+      return {
+        ...state,
+        categoryCounts: {
+          ...state.categoryCounts,
+          [action.categoryId]: (state.categoryCounts[action.categoryId] ?? 0) + 1,
+        },
+      }
     default:
       return state
   }
@@ -282,7 +298,14 @@ export function useDemoEngine() {
       schedule(t, () => dispatch({ type: 'PHASE', phase: 'bboxes' }))
       t += 1500
 
-      schedule(t, () => dispatch({ type: 'PHASE', phase: 'verdict' }))
+      schedule(t, () => {
+        dispatch({ type: 'PHASE', phase: 'verdict' })
+        if (sc.type !== 'auto-ok') {
+          const top = sc.topPredictions[0]
+          const catId = top ? categoryIdFromLabel(top.label) : null
+          if (catId) dispatch({ type: 'INCREMENT_CATEGORY', categoryId: catId })
+        }
+      })
       t += 2400
 
       if (sc.type === 'review') {

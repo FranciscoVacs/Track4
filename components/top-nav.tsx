@@ -81,16 +81,6 @@ export function TopNav({
             <DemoIcon className="h-2.5 w-2.5" aria-hidden="true" />
             {demoLabel}
           </motion.button>
-          <div
-            className="h-6 w-6 rounded-full flex items-center justify-center text-[9.5px] font-bold"
-            style={{
-              background: 'rgba(255,255,255,0.1)',
-              color: '#fff',
-            }}
-            aria-label="Operadora M. González"
-          >
-            MG
-          </div>
         </div>
       </div>
     </motion.header>

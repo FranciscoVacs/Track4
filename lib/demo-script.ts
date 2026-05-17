@@ -308,11 +308,21 @@ export const initialPoolDecisions = [
 ]
 
 export const categories = [
-  { id: 'rota', name: 'Caja rota', color: 'red' as const, count: 4 },
-  { id: 'derrame', name: 'Café derramado', color: 'orange' as const, count: 3 },
-  { id: 'posicion', name: 'Posición incorrecta', color: 'cyan' as const, count: 5 },
-  { id: 'sello', name: 'Sello imperfecto', color: 'navy' as const, count: 2 },
-  { id: 'objeto', name: 'Objeto extraño', color: 'red' as const, count: 0 },
+  { id: 'rota', name: 'Caja rota', color: 'red' as const },
+  { id: 'derrame', name: 'Café derramado', color: 'orange' as const },
+  { id: 'posicion', name: 'Posición incorrecta', color: 'cyan' as const },
+  { id: 'sello', name: 'Sello imperfecto', color: 'navy' as const },
+  { id: 'objeto', name: 'Objeto extraño', color: 'red' as const },
 ]
+
+export function categoryIdFromLabel(label: string): string | null {
+  const l = label.toLowerCase()
+  if (l.includes('caja rota') || l.includes('daño')) return 'rota'
+  if (l.includes('derram')) return 'derrame'
+  if (l.includes('posici') || l.includes('mal posicionad') || l.includes('fuera de lugar')) return 'posicion'
+  if (l.includes('sello')) return 'sello'
+  if (l.includes('objeto') || l.includes('extra')) return 'objeto'
+  return null
+}
 
 export const accuracyHistory = [94.1, 95.0, 95.6, 96.4, 97.0, 97.8, 98.4]

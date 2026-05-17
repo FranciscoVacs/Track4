@@ -11,7 +11,7 @@ const colorHex: Record<string, string> = {
   navy: 'var(--lv-navy)',
 }
 
-export function CategoriesPills() {
+export function CategoriesPills({ counts }: { counts: Record<string, number> }) {
   const reduce = useReducedMotion()
   const [selected, setSelected] = useState<string | null>('etiqueta')
 
@@ -65,7 +65,7 @@ export function CategoriesPills() {
                   color: '#fff',
                 }}
               >
-                {c.count}
+                {counts[c.id] ?? 0}
               </span>
             </motion.button>
           )
