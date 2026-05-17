@@ -141,14 +141,7 @@ export const OperatorQueue = forwardRef<
               <img
                 src={active.image || '/placeholder.svg'}
                 alt={active.productName}
-                onError={(e) => {
-                  const img = e.currentTarget as HTMLImageElement
-                  if (!img.src.includes('picsum.photos')) {
-                    img.src = `https://picsum.photos/seed/${active.id}/400/300`
-                  }
-                }}
                 className="h-24 w-full rounded-md object-cover mb-2.5"
-                crossOrigin="anonymous"
               />
 
               <div

@@ -153,12 +153,9 @@ export function AiClassifying({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.4 }}
-              crossOrigin="anonymous"
               onError={(e) => {
                 const img = e.currentTarget as HTMLImageElement
-                if (!img.src.includes('picsum.photos')) {
-                  img.src = `https://picsum.photos/seed/${scenario.id}/800/450`
-                }
+                img.style.display = 'none'
               }}
             />
           )}

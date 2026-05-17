@@ -24,6 +24,7 @@ export default function Page() {
     play,
     pause,
     replay,
+    setMode,
     dismissRetrain,
     dispatchUpload,
     dispatchUserResult,
@@ -80,7 +81,7 @@ export default function Page() {
 
   return (
     <main className="min-h-screen flex flex-col" style={{ background: 'var(--lv-navy)' }}>
-      <TopNav playState={state.playState} onPlay={play} onPause={pause} onReplay={replay} />
+      <TopNav playState={state.playState} mode={state.mode} onPlay={play} onPause={pause} onReplay={replay} onSetMode={setMode} />
       <HeroKpis
         inspected={state.kpis.inspected}
         autoPct={state.kpis.autoPct}

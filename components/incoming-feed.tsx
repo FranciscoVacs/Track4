@@ -15,16 +15,12 @@ const statusMeta: Record<FeedItem['status'], { label: string; bg: string; color:
   error: { label: 'Error', bg: 'rgba(229,36,33,0.10)', color: 'var(--lv-red)' },
 }
 
-function FeedImage({ src, seedId, alt }: { src: string; seedId: string; alt: string }) {
-  const [errored, setErrored] = useState(false)
-  const finalSrc = errored ? `https://picsum.photos/seed/${seedId}/120/120` : src
+function FeedImage({ src, alt }: { src: string; seedId: string; alt: string }) {
   return (
     <img
-      src={finalSrc || '/placeholder.svg'}
+      src={src || '/placeholder.svg'}
       alt={alt}
-      onError={() => setErrored(true)}
       className="h-10 w-10 rounded-md shrink-0 object-cover"
-      crossOrigin="anonymous"
     />
   )
 }

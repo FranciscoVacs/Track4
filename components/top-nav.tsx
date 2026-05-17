@@ -1,19 +1,24 @@
 'use client'
 
 import { motion, useReducedMotion } from 'framer-motion'
-import { Pause, Play, RotateCcw } from 'lucide-react'
+import { Pause, Play, RotateCcw, Monitor, Upload } from 'lucide-react'
 import { ProductionReviewDialog } from '@/components/production-review-dialog'
+import type { EngineMode } from '@/lib/demo-engine'
 
 export function TopNav({
   playState,
+  mode,
   onPlay,
   onPause,
   onReplay,
+  onSetMode,
 }: {
   playState: 'idle' | 'playing' | 'paused' | 'completed'
+  mode: EngineMode
   onPlay: () => void
   onPause: () => void
   onReplay: () => void
+  onSetMode: (mode: EngineMode) => void
 }) {
   const reduce = useReducedMotion()
 
@@ -24,7 +29,7 @@ export function TopNav({
   }
 
   const demoLabel =
-    playState === 'playing' ? 'Pausar demo' : playState === 'completed' ? 'Repetir' : 'Reproducir demo'
+    playState === 'playing' ? 'Pausar' : playState === 'completed' ? 'Repetir' : 'Reproducir'
   const DemoIcon = playState === 'playing' ? Pause : playState === 'completed' ? RotateCcw : Play
 
   return (
@@ -63,24 +68,56 @@ export function TopNav({
           </span>
         </div>
 
-        {/* Right: production review + play demo + avatar */}
+        {/* Right: mode toggle + production review + play/pause + avatar */}
         <div className="flex items-center gap-2">
+          {/* Mode toggle */}
+          <div className="inline-flex items-center h-6 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+            <button
+              type="button"
+              onClick={() => onSetMode('demo')}
+              className="inline-flex items-center gap-1 px-2.5 h-full text-[10px] font-semibold tracking-wide transition-colors"
+              style={{
+                background: mode === 'demo' ? 'rgba(255,255,255,0.15)' : 'transparent',
+                color: mode === 'demo' ? '#fff' : 'rgba(255,255,255,0.5)',
+              }}
+            >
+              <Monitor className="h-2.5 w-2.5" />
+              Demo
+            </button>
+            <button
+              type="button"
+              onClick={() => onSetMode('live')}
+              className="inline-flex items-center gap-1 px-2.5 h-full text-[10px] font-semibold tracking-wide transition-colors"
+              style={{
+                background: mode === 'live' ? 'rgba(255,255,255,0.15)' : 'transparent',
+                color: mode === 'live' ? '#fff' : 'rgba(255,255,255,0.5)',
+              }}
+            >
+              <Upload className="h-2.5 w-2.5" />
+              Live
+            </button>
+          </div>
+
           <ProductionReviewDialog />
-          <motion.button
-            type="button"
-            onClick={handleDemoClick}
-            whileHover={reduce ? undefined : { scale: 1.04 }}
-            whileTap={reduce ? undefined : { scale: 0.96 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-            className="inline-flex items-center gap-1.5 px-2.5 h-6 rounded-full font-semibold text-[10.5px] leading-none"
-            style={{
-              background: 'linear-gradient(90deg, var(--lv-yellow) 0%, var(--lv-orange) 100%)',
-              color: 'var(--lv-navy)',
-            }}
-          >
-            <DemoIcon className="h-2.5 w-2.5" aria-hidden="true" />
-            {demoLabel}
-          </motion.button>
+
+          {mode === 'demo' && (
+            <motion.button
+              type="button"
+              onClick={handleDemoClick}
+              whileHover={reduce ? undefined : { scale: 1.04 }}
+              whileTap={reduce ? undefined : { scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              className="inline-flex items-center gap-1.5 px-2.5 h-6 rounded-full font-semibold text-[10.5px] leading-none"
+              style={{
+                background: 'linear-gradient(90deg, var(--lv-yellow) 0%, var(--lv-orange) 100%)',
+                color: 'var(--lv-navy)',
+              }}
+            >
+              <DemoIcon className="h-2.5 w-2.5" aria-hidden="true" />
+              {demoLabel}
+            </motion.button>
+          )}
+
           <div
             className="h-6 w-6 rounded-full flex items-center justify-center text-[9.5px] font-bold"
             style={{
